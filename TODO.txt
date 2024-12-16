@@ -1,0 +1,5 @@
+Nowish:
+- Add admin authentication middlewear
+
+Later
+- Add filters for product searching based on region, price, date added

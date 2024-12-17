@@ -1,5 +1,8 @@
 Nowish:
+- Add error handler middlwear to catch zod and mongoose errors
+- Add unknown endpoint endpoint
 - Add admin authentication middlewear
+- 
 
 Later
 - Add filters for product searching based on region, price, date added

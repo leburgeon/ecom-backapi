@@ -1,6 +1,10 @@
 Nowish:
-- Add error handler middlwear to catch zod and mongoose errors
-- Add unknown endpoint endpoint
+- Add error handler middlwear to catch zod and mongoose errors DONE
+- Add unknown endpoint endpoint DONE
+- Add login route
+- Add authentication to required routes eg parse user
+- Add product routes
+- Add order routes
 - Add admin authentication middlewear
 - 
 

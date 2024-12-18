@@ -12,12 +12,14 @@ export const parseNewUser = (req: Request, _res: Response, next: NextFunction) =
   }
 }
 
+export const parseCredentials = (req: Request, _res: Response)
+
 export const errorHandler = (error: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (error instanceof mongoose.Error.ValidationError) {  // For handling a mongoose validation error
     res.status(400).json({error: error.message})
   } else if (error instanceof mongoose.Error.CastError) { // For handling mongoose cast error
     res.status(400).json({error: error.message})
-  } else if (error instanceof mongoose.Error && (error as any).code === 11000) { // For handling mongo duplicate key error
+  } else if ((error as any).code === 11000 && error instanceof Error) { // For handling mongo duplicate key error
     res.status(409).json({error: 'Duplicate Key Error: ' + error.message})
   } else if (error instanceof ZodError) { // For handling duplicate key error
     res.status(400).json({error: error.issues})

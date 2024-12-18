@@ -39,7 +39,6 @@ userRouter.delete('/:id', async (req: Request, res: Response, next: NextFunction
 
   // Id of the user to delete
   const { id } = req.params
-
   try {
     await User.deleteOne({_id: id})
     res.status(200).end()

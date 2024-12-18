@@ -27,6 +27,7 @@ userRouter.get('/', (_req, res, next) => __awaiter(void 0, void 0, void 0, funct
         next(error);
     }
 }));
+// TODO Route for getting the data for a single user, returns the user and populated order data
 // Route for adding a new user
 userRouter.post('/', middlewear_1.parseNewUser, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const { name, username, password } = req.body;
@@ -35,6 +36,19 @@ userRouter.post('/', middlewear_1.parseNewUser, (req, res, next) => __awaiter(vo
         const newUser = new User_1.default({ name, username, passwordHash });
         yield newUser.save();
         res.status(201).json(newUser);
+    }
+    catch (error) {
+        next(error);
+    }
+}));
+// Route for deleting a user
+userRouter.delete('/:id', (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    // TODO add check that the use is authorised to delete this user
+    // Id of the user to delete
+    const { id } = req.params;
+    try {
+        yield User_1.default.deleteOne({ _id: id });
+        res.status(200).end();
     }
     catch (error) {
         next(error);

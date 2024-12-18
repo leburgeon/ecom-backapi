@@ -9,8 +9,8 @@ if (!MONGODB_URL || typeof MONGODB_URL !== 'string'){
   throw new Error('MONGODB_URL not defined or incorrect in process.env')
 }
 
-if (!PORT || typeof PORT !== 'number'){
-  throw new Error('PORT not defined or incorrect in process.env')
+if (!PORT){
+  throw new Error('PORT not defined')
 }
 
 export default {PORT, MONGODB_URL}

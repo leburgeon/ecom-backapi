@@ -1,13 +1,13 @@
 import express, {NextFunction, Request, Response} from 'express'
 import User from '../models/User'
-import { authenticateUser, parseNewUser } from '../utils/middlewear'
+import { authenticateAdmin, authenticateUser, parseNewUser } from '../utils/middlewear'
 import { AuthenticatedRequest, NewUser } from '../types'
 import bcrypt from 'bcryptjs'
 
 const userRouter = express.Router()
 
 // Route for returning a list of the users in the database
-userRouter.get('/', authenticateUser, async (req: AuthenticatedRequest, res: Response, next) => {
+userRouter.get('/', authenticateAdmin, async (req: AuthenticatedRequest, res: Response, next) => {
   console.log('Authenticated user: ', req.user)
   try {
     const allUsers = await User.find({})
@@ -22,11 +22,11 @@ userRouter.get('/', authenticateUser, async (req: AuthenticatedRequest, res: Res
 
 // Route for adding a new user
 userRouter.post('/', parseNewUser, async (req: Request<unknown, unknown, NewUser>, res: Response, next: NextFunction) => {
-  const { name, username, password, isAdmin } = req.body
+  const { name, username, password } = req.body
   const passwordHash = await bcrypt.hash(password, 10)
 
   try {
-    const newUser = new User({name, username, passwordHash, isAdmin})
+    const newUser = new User({name, username, passwordHash, isAdmin: false})
     await newUser.save()
     res.status(201).json(newUser)
   } catch (error: unknown) {
@@ -34,8 +34,23 @@ userRouter.post('/', parseNewUser, async (req: Request<unknown, unknown, NewUser
   }
 })
 
+// Route for adding a new admin user, request must be authenticated as coming from an existing admin
+userRouter.post('/admin', authenticateAdmin, parseNewUser, async (req: Request<unknown, unknown, NewUser>, res: Response, next: NextFunction) => {
+  const { name, username, password } = req.body
+  const passwordHash = await bcrypt.hash(password, 10)
+
+  try {
+    const newUser = new User({name, username, passwordHash, isAdmin: true})
+    await newUser.save()
+    res.status(201).json({newUser})
+  } catch (error: unknown){
+    next(error)
+  }
+})
+
+
 // Route for deleting a user
-userRouter.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
+userRouter.delete('/:id', authenticateUser, async (req: Request, res: Response, next: NextFunction) => {
   // TODO add check that the use is authorised to delete this user
 
   // Id of the user to delete

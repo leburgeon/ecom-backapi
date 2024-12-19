@@ -13,7 +13,8 @@ const userSchema = new mongoose.Schema({
   },
   orders:{
     type:[mongoose.Schema.Types.ObjectId],
-    default: []
+    default: [],
+    ref: 'Order'
   },
   passwordHash: {
     type: String,

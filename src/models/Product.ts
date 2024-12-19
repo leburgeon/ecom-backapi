@@ -20,7 +20,8 @@ const productSchema = new mongoose.Schema({
   },
   description: {
     type: mongoose.Types.ObjectId,
-    required: true
+    required: true,
+    ref: 'Description'
   }
 })
 

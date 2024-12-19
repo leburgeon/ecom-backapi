@@ -1,12 +1,110 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.errorHandler = exports.parseNewUser = void 0;
+exports.errorHandler = exports.parseLoginCredentials = exports.parseNewUser = exports.authenticateAdmin = exports.authenticateUser = void 0;
 const validators_1 = require("./validators");
 const mongoose_1 = __importDefault(require("mongoose"));
 const zod_1 = require("zod");
+const jsonwebtoken_1 = __importStar(require("jsonwebtoken"));
+const config_1 = __importDefault(require("./config"));
+const User_1 = __importDefault(require("../models/User"));
+// Middlewear for authenticating a user and extracting the user info into the request
+const authenticateUser = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    // Extracts the authorisation header from the request
+    const authorisation = req.get('Authorization');
+    // Checks that the token uses the bearer scheme and if not sends the request
+    if (!authorisation || !authorisation.startsWith('Bearer ')) {
+        res.status(400).json({ error: 'Please provide authentication token with bearer scheme' });
+    }
+    else {
+        try {
+            // Attempts to verify the token with the environment secret
+            const token = authorisation.replace('Bearer ', '');
+            const decoded = jsonwebtoken_1.default.verify(token, config_1.default.SECRET);
+            const payload = validators_1.JwtUserPayloadSchema.parse(decoded);
+            // Finds the user with the id in the payload
+            const userDocument = yield User_1.default.findById(payload.id);
+            if (!userDocument) {
+                // If the user is not found, response is updates
+                res.status(400).send({ error: 'User not found, re-login' });
+            }
+            else {
+                // Sets the user field of the request
+                const user = {
+                    username: userDocument.username,
+                    name: userDocument.name,
+                    id: userDocument._id.toString()
+                };
+                req.user = user;
+                next();
+            }
+        }
+        catch (error) {
+            console.log('Error thrown during auth');
+            next(error);
+        }
+    }
+});
+exports.authenticateUser = authenticateUser;
+// Middlewear for authenticating an admin
+const authenticateAdmin = (req, res, next) => {
+    var _a;
+    (0, exports.authenticateUser)(req, res, next);
+    if ((_a = req.user) === null || _a === void 0 ? void 0 : _a.isAdmin) {
+        next();
+    }
+    else {
+        const notAdminError = new Error('Admin not found');
+        notAdminError.name = 'NotAdminError';
+        next(notAdminError);
+    }
+};
+exports.authenticateAdmin = authenticateAdmin;
+// Middlewear for parsing the request body before creating a new user
 const parseNewUser = (req, _res, next) => {
     try {
         validators_1.NewUserSchema.parse(req.body);
@@ -17,6 +115,18 @@ const parseNewUser = (req, _res, next) => {
     }
 };
 exports.parseNewUser = parseNewUser;
+// For parsing the request body for the login credentials
+const parseLoginCredentials = (req, _res, next) => {
+    try {
+        validators_1.LoginCredentialsSchema.parse(req.body);
+        next();
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.parseLoginCredentials = parseLoginCredentials;
+// Error handler for the application
 const errorHandler = (error, _req, res, _next) => {
     if (error instanceof mongoose_1.default.Error.ValidationError) { // For handling a mongoose validation error
         res.status(400).json({ error: error.message });
@@ -28,9 +138,16 @@ const errorHandler = (error, _req, res, _next) => {
         res.status(409).json({ error: 'Duplicate Key Error: ' + error.message });
     }
     else if (error instanceof zod_1.ZodError) { // For handling duplicate key error
-        res.status(400).json({ error: error.issues });
+        res.status(401).json({ error: error.issues });
+    }
+    else if (error instanceof jsonwebtoken_1.JsonWebTokenError) {
+        res.status(401).json({ error: `${error.name}:${error.message}` });
+    }
+    else if (error instanceof jsonwebtoken_1.TokenExpiredError) {
+        res.status(400).json({ error: 'Token expired, please re-login' });
     }
     else {
+        console.error(error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };

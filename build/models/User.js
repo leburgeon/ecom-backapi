@@ -17,11 +17,16 @@ const userSchema = new mongoose_1.default.Schema({
     },
     orders: {
         type: [mongoose_1.default.Schema.Types.ObjectId],
-        default: []
+        default: [],
+        ref: 'Order'
     },
     passwordHash: {
         type: String,
         required: true
+    },
+    isAdmin: {
+        type: Boolean,
+        default: false
     }
 });
 userSchema.set('toJSON', {
@@ -30,6 +35,7 @@ userSchema.set('toJSON', {
             delete returnedObject._id;
         delete returnedObject.__v;
         delete returnedObject.passwordHash;
+        delete returnedObject.isAdmin;
     }
 });
 const User = mongoose_1.default.model('User', userSchema);

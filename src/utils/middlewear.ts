@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express"
-import {  JwtUserPayloadSchema, LoginCredentialsSchema, NewUserSchema } from "./validators"
+import {  JwtUserPayloadSchema, LoginCredentialsSchema, NewProductSchema, NewUserSchema } from "./validators"
 import mongoose from "mongoose"
 import { ZodError } from "zod"
 import jwt, { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
@@ -64,6 +64,16 @@ export const authenticateAdmin = (req: Request, res: Response, next: NextFunctio
 export const parseNewUser = (req: Request, _res: Response, next: NextFunction) => {
   try {
     NewUserSchema.parse(req.body)
+    next()
+  } catch (error: unknown) {
+    next(error)
+  }
+}
+
+// Middlewear for parsing the request body for the fields required for a new product
+export const parseNewProduct = (req: Request, _res: Response, next: NextFunction) => {
+  try {
+    NewProductSchema.parse(req.body)
     next()
   } catch (error: unknown) {
     next(error)

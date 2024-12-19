@@ -18,3 +18,4 @@ Nowish:
 
 Later
 - Add filters for product searching based on region, price, date added
+- Add pagination for retrieving products

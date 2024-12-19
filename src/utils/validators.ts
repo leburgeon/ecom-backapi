@@ -7,6 +7,13 @@ export const NewUserSchema = z.object({
   isAdmin: z.boolean()
 })
 
+export const NewProductSchema = z.object({
+  name: z.string(),
+  category: z.string(),
+  price: z.coerce.number(),
+  description: z.string().min(10)
+})
+
 export const LoginCredentialsSchema = z.object({
   username: z.string(),
   password: z.string()

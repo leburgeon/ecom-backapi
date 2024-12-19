@@ -18,7 +18,8 @@ const middlewear_1 = require("../utils/middlewear");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const userRouter = express_1.default.Router();
 // Route for returning a list of the users in the database
-userRouter.get('/', (_req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+userRouter.get('/', middlewear_1.authenticateAdmin, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('Authenticated user: ', req.user);
     try {
         const allUsers = yield User_1.default.find({});
         res.status(200).json(allUsers);
@@ -33,7 +34,7 @@ userRouter.post('/', middlewear_1.parseNewUser, (req, res, next) => __awaiter(vo
     const { name, username, password } = req.body;
     const passwordHash = yield bcryptjs_1.default.hash(password, 10);
     try {
-        const newUser = new User_1.default({ name, username, passwordHash });
+        const newUser = new User_1.default({ name, username, passwordHash, isAdmin: false });
         yield newUser.save();
         res.status(201).json(newUser);
     }
@@ -41,8 +42,21 @@ userRouter.post('/', middlewear_1.parseNewUser, (req, res, next) => __awaiter(vo
         next(error);
     }
 }));
+// Route for adding a new admin user, request must be authenticated as coming from an existing admin
+userRouter.post('/admin', middlewear_1.authenticateAdmin, middlewear_1.parseNewUser, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { name, username, password } = req.body;
+    const passwordHash = yield bcryptjs_1.default.hash(password, 10);
+    try {
+        const newUser = new User_1.default({ name, username, passwordHash, isAdmin: true });
+        yield newUser.save();
+        res.status(201).json({ newUser });
+    }
+    catch (error) {
+        next(error);
+    }
+}));
 // Route for deleting a user
-userRouter.delete('/:id', (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+userRouter.delete('/:id', middlewear_1.authenticateUser, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     // TODO add check that the use is authorised to delete this user
     // Id of the user to delete
     const { id } = req.params;

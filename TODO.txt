@@ -1,8 +1,16 @@
 Nowish:
 - Add error handler middlwear to catch zod and mongoose errors DONE
 - Add unknown endpoint endpoint DONE
-- Add login route
-- Add authentication to required routes eg parse user
+- Add login route DONE
+- Add authentication to required routes eg parse user DONE
+- Add error handler for invalid token DONE
+
+- Add route for loggin in an admin
+- Add route for creating an admin
+ - how? Special route? Provide admin password? 
+
+
+
 - Add product routes
 - Add order routes
 - Add admin authentication middlewear

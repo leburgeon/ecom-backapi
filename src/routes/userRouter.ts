@@ -1,13 +1,14 @@
 import express, {NextFunction, Request, Response} from 'express'
 import User from '../models/User'
-import { parseNewUser } from '../utils/middlewear'
-import { NewUser } from '../types'
+import { authenticateUser, parseNewUser } from '../utils/middlewear'
+import { AuthenticatedRequest, NewUser } from '../types'
 import bcrypt from 'bcryptjs'
 
 const userRouter = express.Router()
 
 // Route for returning a list of the users in the database
-userRouter.get('/', async (_req, res, next) => {
+userRouter.get('/', authenticateUser, async (req: AuthenticatedRequest, res: Response, next) => {
+  console.log('Authenticated user: ', req.user)
   try {
     const allUsers = await User.find({})
     res.status(200).json(allUsers)
@@ -21,11 +22,11 @@ userRouter.get('/', async (_req, res, next) => {
 
 // Route for adding a new user
 userRouter.post('/', parseNewUser, async (req: Request<unknown, unknown, NewUser>, res: Response, next: NextFunction) => {
-  const { name, username, password } = req.body
+  const { name, username, password, isAdmin } = req.body
   const passwordHash = await bcrypt.hash(password, 10)
 
   try {
-    const newUser = new User({name, username, passwordHash})
+    const newUser = new User({name, username, passwordHash, isAdmin})
     await newUser.save()
     res.status(201).json(newUser)
   } catch (error: unknown) {

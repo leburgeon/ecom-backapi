@@ -5,13 +5,29 @@ Nowish:
 - Add authentication to required routes eg parse user DONE
 - Add error handler for invalid token DONE
 
-- Add route for loggin in an admin
-- Add route for creating an admin
- - how? Special route? Provide admin password? 
-
+- Add funcitonality for loggin in an admin DONE
+  - Dont need to, user retrieved from id in token every request. (necessary?)
+- Add route for creating an admin DONE
+  - Was achieved with an endpoint that required admin authentication
+- Test deleting a user with either user authentication or admin authentication DONE
 
 
 - Add product routes
+- Add script for resetting database with a user- dont delete the admin
+- Test product adding and paginated retrieval DONE
+- Add route for retreiving a single product, with populated description DONE
+- Add route for deleting a product, requires admin DONE
+- Add filters for category and price range DONE
+- Change category filter to use array and $in syntax for mongoose query DONE
+- Add instock filter DONE
+
+- Ask chat gpt how i should structure my system for basket and orders
+- Implement routes for basket
+- Implement routes for orders
+  - Implement task queue for sending the confirmation email
+  - Look up how to send emails from a node server
+
+
 - Add order routes
 - Add admin authentication middlewear
 - 

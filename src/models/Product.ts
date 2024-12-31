@@ -13,13 +13,15 @@ const productSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
-  inStock: {
-    type: Boolean,
-    required: true,
-    default: false
+  stock: {
+    quantity: Number,
+    reserved: {
+      type: Number,
+      default: 0
+    }
   },
   description: {
-    type: mongoose.Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     required: true,
     ref: 'Description'
   }
@@ -28,9 +30,13 @@ const productSchema = new mongoose.Schema({
 productSchema.set('toJSON', {
   transform: (document, returnedObject) => {
     returnedObject.id = document._id.toString()
-    returnedObject.description = returnedObject.description.toString()
     delete returnedObject._id
     delete returnedObject.__v
+
+    // If the product documents description field has not been populated, delete the field
+    if (!document.populated('description')){
+      delete returnedObject.description
+    } 
   }
 })
 

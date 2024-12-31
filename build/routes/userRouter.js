@@ -34,7 +34,7 @@ userRouter.post('/', middlewear_1.parseNewUser, (req, res, next) => __awaiter(vo
     const { name, username, password } = req.body;
     const passwordHash = yield bcryptjs_1.default.hash(password, 10);
     try {
-        const newUser = new User_1.default({ name, username, passwordHash, isAdmin: false });
+        const newUser = new User_1.default({ name, username, passwordHash });
         yield newUser.save();
         res.status(201).json(newUser);
     }
@@ -57,15 +57,21 @@ userRouter.post('/admin', middlewear_1.authenticateAdmin, middlewear_1.parseNewU
 }));
 // Route for deleting a user
 userRouter.delete('/:id', middlewear_1.authenticateUser, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    // TODO add check that the use is authorised to delete this user
+    var _a, _b;
     // Id of the user to delete
     const { id } = req.params;
-    try {
-        yield User_1.default.deleteOne({ _id: id });
-        res.status(200).end();
+    // Ensures that the user is authorised to delete the user document, either with the same user id or with an admin account
+    if (!(((_a = req.user) === null || _a === void 0 ? void 0 : _a._id.toString()) === id) && !((_b = req.user) === null || _b === void 0 ? void 0 : _b.isAdmin)) {
+        res.status(401).json({ error: 'Unauthorised for that one!' });
     }
-    catch (error) {
-        next(error);
+    else {
+        try {
+            yield User_1.default.deleteOne({ _id: id });
+            res.status(200).end();
+        }
+        catch (error) {
+            next(error);
+        }
     }
 }));
 exports.default = userRouter;

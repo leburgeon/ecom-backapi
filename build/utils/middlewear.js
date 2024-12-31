@@ -45,20 +45,21 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.errorHandler = exports.parseLoginCredentials = exports.parseNewUser = exports.authenticateAdmin = exports.authenticateUser = void 0;
+exports.errorHandler = exports.parsePagination = exports.parseLoginCredentials = exports.parseNewProduct = exports.parseNewUser = exports.authenticateAdmin = exports.authenticateUser = void 0;
 const validators_1 = require("./validators");
 const mongoose_1 = __importDefault(require("mongoose"));
 const zod_1 = require("zod");
 const jsonwebtoken_1 = __importStar(require("jsonwebtoken"));
 const config_1 = __importDefault(require("./config"));
 const User_1 = __importDefault(require("../models/User"));
+// Middlewear for parsing the new request and ensuring that the request has fiels for page limit and page number 
 // Middlewear for authenticating a user and extracting the user info into the request
 const authenticateUser = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     // Extracts the authorisation header from the request
     const authorisation = req.get('Authorization');
     // Checks that the token uses the bearer scheme and if not sends the request
     if (!authorisation || !authorisation.startsWith('Bearer ')) {
-        res.status(400).json({ error: 'Please provide authentication token with bearer scheme' });
+        res.status(401).json({ error: 'Please provide authentication token with bearer scheme' });
     }
     else {
         try {
@@ -70,16 +71,10 @@ const authenticateUser = (req, res, next) => __awaiter(void 0, void 0, void 0, f
             const userDocument = yield User_1.default.findById(payload.id);
             if (!userDocument) {
                 // If the user is not found, response is updates
-                res.status(400).send({ error: 'User not found, re-login' });
+                res.status(401).send({ error: 'User not found, re-login' });
             }
             else {
-                // Sets the user field of the request
-                const user = {
-                    username: userDocument.username,
-                    name: userDocument.name,
-                    id: userDocument._id.toString()
-                };
-                req.user = user;
+                req.user = userDocument;
                 next();
             }
         }
@@ -91,18 +86,32 @@ const authenticateUser = (req, res, next) => __awaiter(void 0, void 0, void 0, f
 });
 exports.authenticateUser = authenticateUser;
 // Middlewear for authenticating an admin
-const authenticateAdmin = (req, res, next) => {
-    var _a;
-    (0, exports.authenticateUser)(req, res, next);
-    if ((_a = req.user) === null || _a === void 0 ? void 0 : _a.isAdmin) {
-        next();
+const authenticateAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const authorization = req.get('Authorization');
+    // Checks that the authorization uses the bearer scheme
+    if (!authorization || !authorization.startsWith('Bearer ')) {
+        res.status(401).json({ error: 'Please provide auth token with bearer scheme' });
     }
     else {
-        const notAdminError = new Error('Admin not found');
-        notAdminError.name = 'NotAdminError';
-        next(notAdminError);
+        const token = authorization.replace('Bearer ', '');
+        try {
+            // Verifies the token whilst decoding the payload
+            const decoded = jsonwebtoken_1.default.verify(token, config_1.default.SECRET);
+            const payload = validators_1.JwtUserPayloadSchema.parse(decoded);
+            // Attempts to find an admin account with the id in the payload
+            const adminUser = yield User_1.default.findOne({ _id: payload.id, isAdmin: true });
+            if (!adminUser) {
+                res.status(401).json({ error: 'Admin user not found' });
+            }
+            else {
+                next();
+            }
+        }
+        catch (error) {
+            next(error);
+        }
     }
-};
+});
 exports.authenticateAdmin = authenticateAdmin;
 // Middlewear for parsing the request body before creating a new user
 const parseNewUser = (req, _res, next) => {
@@ -115,6 +124,17 @@ const parseNewUser = (req, _res, next) => {
     }
 };
 exports.parseNewUser = parseNewUser;
+// Middlewear for parsing the request body for the fields required for a new product
+const parseNewProduct = (req, _res, next) => {
+    try {
+        validators_1.NewProductSchema.parse(req.body);
+        next();
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.parseNewProduct = parseNewProduct;
 // For parsing the request body for the login credentials
 const parseLoginCredentials = (req, _res, next) => {
     try {
@@ -126,6 +146,17 @@ const parseLoginCredentials = (req, _res, next) => {
     }
 };
 exports.parseLoginCredentials = parseLoginCredentials;
+// For parsing the query attribute on the express request for pagination details
+const parsePagination = (req, _res, next) => {
+    try {
+        validators_1.PaginationDetailsSchema.parse(req.query);
+        next();
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.parsePagination = parsePagination;
 // Error handler for the application
 const errorHandler = (error, _req, res, _next) => {
     if (error instanceof mongoose_1.default.Error.ValidationError) { // For handling a mongoose validation error

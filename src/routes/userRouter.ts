@@ -26,7 +26,7 @@ userRouter.post('/', parseNewUser, async (req: Request<unknown, unknown, NewUser
   const passwordHash = await bcrypt.hash(password, 10)
 
   try {
-    const newUser = new User({name, username, passwordHash, isAdmin: false})
+    const newUser = new User({name, username, passwordHash})
     await newUser.save()
     res.status(201).json(newUser)
   } catch (error: unknown) {
@@ -38,7 +38,6 @@ userRouter.post('/', parseNewUser, async (req: Request<unknown, unknown, NewUser
 userRouter.post('/admin', authenticateAdmin, parseNewUser, async (req: Request<unknown, unknown, NewUser>, res: Response, next: NextFunction) => {
   const { name, username, password } = req.body
   const passwordHash = await bcrypt.hash(password, 10)
-
   try {
     const newUser = new User({name, username, passwordHash, isAdmin: true})
     await newUser.save()
@@ -50,16 +49,20 @@ userRouter.post('/admin', authenticateAdmin, parseNewUser, async (req: Request<u
 
 
 // Route for deleting a user
-userRouter.delete('/:id', authenticateUser, async (req: Request, res: Response, next: NextFunction) => {
-  // TODO add check that the use is authorised to delete this user
-
+userRouter.delete('/:id', authenticateUser, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   // Id of the user to delete
   const { id } = req.params
-  try {
-    await User.deleteOne({_id: id})
-    res.status(200).end()
-  } catch (error: unknown) {
-    next(error)
+  
+  // Ensures that the user is authorised to delete the user document, either with the same user id or with an admin account
+  if (!(req.user?._id.toString() === id) && !(req.user?.isAdmin)) {
+    res.status(401).json({error: 'Unauthorised for that one!'})
+  } else {
+    try {
+      await User.deleteOne({_id: id})
+      res.status(200).end()
+    } catch (error: unknown) {
+      next(error)
+    }
   }
 })
 

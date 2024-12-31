@@ -18,7 +18,7 @@ const descriptionSchema = new mongoose_1.default.Schema({
 descriptionSchema.set('toJSON', {
     transform: (document, returnedObject) => {
         returnedObject.id = document._id;
-        returnedObject.product = returnedObject.product.toString();
+        delete returnedObject.product;
         delete returnedObject._id;
         delete returnedObject.__v;
     }

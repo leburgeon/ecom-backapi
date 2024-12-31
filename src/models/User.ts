@@ -33,6 +33,7 @@ userSchema.set('toJSON', {
     delete returnedObject.__v
     delete returnedObject.passwordHash
     delete returnedObject.isAdmin
+    delete returnedObject.orders
   }
 })
 

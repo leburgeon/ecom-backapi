@@ -1,11 +1,13 @@
 import { Request, Response, NextFunction } from "express"
-import {  JwtUserPayloadSchema, LoginCredentialsSchema, NewProductSchema, NewUserSchema } from "./validators"
+import {  JwtUserPayloadSchema, LoginCredentialsSchema, NewProductSchema, NewUserSchema, PaginationDetailsSchema } from "./validators"
 import mongoose from "mongoose"
 import { ZodError } from "zod"
 import jwt, { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 import config from "./config"
 import User from "../models/User"
 import { AuthenticatedRequest} from "../types"
+
+// Middlewear for parsing the new request and ensuring that the request has fiels for page limit and page number 
 
 // Middlewear for authenticating a user and extracting the user info into the request
 export const authenticateUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -15,7 +17,7 @@ export const authenticateUser = async (req: AuthenticatedRequest, res: Response,
 
   // Checks that the token uses the bearer scheme and if not sends the request
   if (!authorisation || !authorisation.startsWith('Bearer ')){
-    res.status(400).json({error: 'Please provide authentication token with bearer scheme'})
+    res.status(401).json({error: 'Please provide authentication token with bearer scheme'})
   } else {
     try {
 
@@ -29,16 +31,9 @@ export const authenticateUser = async (req: AuthenticatedRequest, res: Response,
       if (!userDocument) {
 
         // If the user is not found, response is updates
-        res.status(400).send({error: 'User not found, re-login'})
+        res.status(401).send({error: 'User not found, re-login'})
       } else {
-
-        // Sets the user field of the request
-        const user = {
-          username: userDocument.username,
-          name: userDocument.name,
-          id: userDocument._id.toString()
-        } 
-        req.user = user
+        req.user = userDocument
         next()
       }
     } catch (error: unknown) {
@@ -49,14 +44,28 @@ export const authenticateUser = async (req: AuthenticatedRequest, res: Response,
 }
 
 // Middlewear for authenticating an admin
-export const authenticateAdmin = (req: Request, res: Response, next: NextFunction) => {
-  authenticateUser(req, res, next)
-  if ((req as AuthenticatedRequest).user?.isAdmin) {
-    next()
+export const authenticateAdmin = async (req: Request, res: Response, next: NextFunction) => {
+  const authorization = req.get('Authorization')
+
+  // Checks that the authorization uses the bearer scheme
+  if (!authorization || !authorization.startsWith('Bearer ')){
+    res.status(401).json({error: 'Please provide auth token with bearer scheme'})
   } else {
-    const notAdminError = new Error('Admin not found')
-    notAdminError.name = 'NotAdminError'
-    next(notAdminError)
+    const token = authorization.replace('Bearer ', '')
+    try {
+      // Verifies the token whilst decoding the payload
+      const decoded = jwt.verify(token, config.SECRET)
+      const payload = JwtUserPayloadSchema.parse(decoded)
+      // Attempts to find an admin account with the id in the payload
+      const adminUser = await User.findOne({_id: payload.id, isAdmin: true})
+      if (!adminUser) {
+        res.status(401).json({error: 'Admin user not found'})
+      } else {
+        next()
+      }
+    } catch (error: unknown) {
+      next(error)
+    }
   }
 }
 
@@ -86,6 +95,16 @@ export const parseLoginCredentials = (req: Request, _res: Response, next: NextFu
     LoginCredentialsSchema.parse(req.body)
     next()
   } catch (error: unknown) {
+    next(error)
+  }
+}
+
+// For parsing the query attribute on the express request for pagination details
+export const parsePagination = (req: Request, _res: Response, next: NextFunction) => {
+  try {
+    PaginationDetailsSchema.parse(req.query)
+    next()
+  } catch (error: unknown){
     next(error)
   }
 }

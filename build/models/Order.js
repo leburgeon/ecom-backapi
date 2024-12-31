@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { setSyntheticTrailingComments } from 'typescript'
 
 const orderSchema = new mongoose.Schema({
   products: [
@@ -25,6 +26,10 @@ const orderSchema = new mongoose.Schema({
   },
   total: {
     type: Number,
+    required: true
+  },
+  status: {
+    type: String,
     required: true
   }
 })

@@ -45,7 +45,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.errorHandler = exports.parsePagination = exports.parseLoginCredentials = exports.parseNewProduct = exports.parseNewUser = exports.authenticateAdmin = exports.authenticateUser = void 0;
+exports.errorHandler = exports.parseNewOrder = exports.parsePagination = exports.parseLoginCredentials = exports.parseNewProduct = exports.parseNewUser = exports.authenticateAdmin = exports.authenticateUser = void 0;
 const validators_1 = require("./validators");
 const mongoose_1 = __importDefault(require("mongoose"));
 const zod_1 = require("zod");
@@ -157,6 +157,17 @@ const parsePagination = (req, _res, next) => {
     }
 };
 exports.parsePagination = parsePagination;
+// For parsing the request body a new order
+const parseNewOrder = (req, _res, next) => {
+    try {
+        validators_1.NewOrderSchema.parse(req.body);
+        next();
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.parseNewOrder = parseNewOrder;
 // Error handler for the application
 const errorHandler = (error, _req, res, _next) => {
     if (error instanceof mongoose_1.default.Error.ValidationError) { // For handling a mongoose validation error

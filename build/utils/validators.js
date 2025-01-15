@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PaginationDetailsSchema = exports.JwtUserPayloadSchema = exports.LoginCredentialsSchema = exports.NewProductSchema = exports.NewUserSchema = void 0;
+exports.NewOrderSchema = exports.PaginationDetailsSchema = exports.JwtUserPayloadSchema = exports.LoginCredentialsSchema = exports.NewProductSchema = exports.NewUserSchema = void 0;
 const zod_1 = require("zod");
 exports.NewUserSchema = zod_1.z.object({
     name: zod_1.z.string(),
@@ -26,4 +26,11 @@ exports.JwtUserPayloadSchema = zod_1.z.object({
 exports.PaginationDetailsSchema = zod_1.z.object({
     page: zod_1.z.coerce.number(),
     limit: zod_1.z.coerce.number()
+});
+exports.NewOrderSchema = zod_1.z.object({
+    products: zod_1.z.object({
+        id: zod_1.z.string(),
+        quantity: zod_1.z.coerce.number()
+    }).array(),
+    total: zod_1.z.coerce.number()
 });

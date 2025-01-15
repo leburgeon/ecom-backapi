@@ -25,6 +25,8 @@ productRouter.get('/', middlewear_1.parsePagination, (req, res, next) => __await
     const filters = {};
     // For adding a filter to only include the filtered categories
     if (categories && zod_1.z.string().array().parse(categories)) {
+        console.log('#################################');
+        console.log();
         filters.category = {
             $in: categories
         };
@@ -38,10 +40,10 @@ productRouter.get('/', middlewear_1.parsePagination, (req, res, next) => __await
     }
     // For adding a filter to only return instock items
     if (inStock && inStock === 'true') {
-        filters.stock = {
-            quantity: { $gte: 1 }
-        };
+        filters['stock.quantity'] = { $gte: 1 };
     }
+    console.log('#################################');
+    console.log(filters);
     // Parses the query strings to integers
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;

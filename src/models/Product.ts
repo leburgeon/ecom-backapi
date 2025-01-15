@@ -1,5 +1,16 @@
 import mongoose from 'mongoose'
 
+const stockSchema = new mongoose.Schema({
+  quantity: {
+    type: Number,
+    default: 0
+  },
+  reserved: {
+    type: Number,
+    default: 0
+  }
+})
+
 const productSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -14,11 +25,8 @@ const productSchema = new mongoose.Schema({
     required: true
   },
   stock: {
-    quantity: Number,
-    reserved: {
-      type: Number,
-      default: 0
-    }
+    type: stockSchema,
+    required: true
   },
   description: {
     type: mongoose.Schema.Types.ObjectId,

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express"
-import {  JwtUserPayloadSchema, LoginCredentialsSchema, NewProductSchema, NewUserSchema, PaginationDetailsSchema } from "./validators"
+import {  NewOrderSchema, JwtUserPayloadSchema, LoginCredentialsSchema, NewProductSchema, NewUserSchema, PaginationDetailsSchema } from "./validators"
 import mongoose from "mongoose"
 import { ZodError } from "zod"
 import jwt, { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
@@ -105,6 +105,16 @@ export const parsePagination = (req: Request, _res: Response, next: NextFunction
     PaginationDetailsSchema.parse(req.query)
     next()
   } catch (error: unknown){
+    next(error)
+  }
+}
+
+// For parsing the request body a new order
+export const parseNewOrder = (req: Request, _res: Response, next: NextFunction) => {
+  try {
+    NewOrderSchema.parse(req.body)
+    next()
+  } catch (error: unknown) {
     next(error)
   }
 }

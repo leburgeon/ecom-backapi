@@ -12,7 +12,7 @@ Nowish:
 - Test deleting a user with either user authentication or admin authentication DONE
 
 
-- Add product routes
+- Add product routes DONE
 - Add script for resetting database with a user- dont delete the admin
 - Test product adding and paginated retrieval DONE
 - Add route for retreiving a single product, with populated description DONE
@@ -21,9 +21,18 @@ Nowish:
 - Change category filter to use array and $in syntax for mongoose query DONE
 - Add instock filter DONE
 
+- Implement routes for orders
+- Add order model DONE
+- Add route for orders 
+  - Add zod validation for order ObjectId
+  - Add validation for stock of items in order
+- Add route for updating status of orders
+- Implement task queue for sending email confirmation
+- Figue where to add payment in application
+
 - Ask chat gpt how i should structure my system for basket and orders
 - Implement routes for basket
-- Implement routes for orders
+
   - Implement task queue for sending the confirmation email
   - Look up how to send emails from a node server
 

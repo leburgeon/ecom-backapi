@@ -29,3 +29,11 @@ export const PaginationDetailsSchema = z.object({
   page: z.coerce.number(),
   limit: z.coerce.number()
 })
+
+export const NewOrderSchema = z.object({
+  products: z.object({
+    id: z.string(),
+    quantity: z.coerce.number()
+  }).array(),
+  total: z.coerce.number()
+})

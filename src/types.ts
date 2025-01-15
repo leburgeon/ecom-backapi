@@ -1,5 +1,5 @@
 import { Request } from "express"
-import { NewUserSchema, LoginCredentialsSchema, JwtUserPayloadSchema, NewProductSchema } from "./utils/validators"
+import { NewOrderSchema, NewUserSchema, LoginCredentialsSchema, JwtUserPayloadSchema, NewProductSchema } from "./utils/validators"
 import { z } from 'zod'
 import mongoose from "mongoose"
 
@@ -31,7 +31,11 @@ export interface UserDocument {
 export type JwtUserPayload = z.infer<typeof JwtUserPayloadSchema>
 
 // Interface that extends the express request type but includes a field for the user after authenticatin
-export interface AuthenticatedRequest extends Request {
+export interface AuthenticatedRequest<
+  P = any, 
+  ResBody = any,
+  ReqBody = any
+> extends Request<P, ResBody, ReqBody> {
   // must include optional parameter here otherwise overload not accepted
   user?: UserDocument
 }
@@ -43,3 +47,6 @@ export interface PageQueriesRequest extends Request {
     limit: string
   }
 }
+
+// Type of the parsed new order request body
+export type NewOrder = z.infer<typeof NewOrderSchema>

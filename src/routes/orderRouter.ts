@@ -17,10 +17,16 @@ orderRouter.post('/', authenticateUser, async (req: AuthenticatedRequest<unknown
   const session = await mongoose.startSession()
   session.startTransaction()
 
+  // Try block attempts to perform the database updates within the transaction
+  // If an error thrown within try block, transaction aborted
   try {
+    // For each of the products in the array, this block attempts to:
+    // - Validate that the product exists, throwing an error if it is not found
+    // - Asserts that there is sufficient stock for the quantity of the product
+    // - Decrement the amount of stock from the stock reserve
+    // - Save the stock updated document
+    let totalCost = 0
 
-    // Validates that each of the products exists and has adequate stock reserved
-    // Then saves each of the updated products stock
     const productDocsStockChanged = await Promise.all(products.map( async product => {
       const doc = await Product.findById(product.id).session(session)
 
@@ -34,6 +40,9 @@ orderRouter.post('/', authenticateUser, async (req: AuthenticatedRequest<unknown
         throw new Error(`Insufficient stock for ${doc.name} x ${product.quantity}`)
       }
 
+      // Updates the cost total 
+      totalCost += (doc.price * product.quantity)
+
       // Decrements the stock reserve and returns the document (not saved)
       doc.stock.reserved -= product.quantity
 
@@ -43,7 +52,7 @@ orderRouter.post('/', authenticateUser, async (req: AuthenticatedRequest<unknown
     }))
 
 
-    // Products array for new order
+    // Creates an array representing the list of products for the new order document
     const productsForNewOrder = productDocsStockChanged.map(product => {
       return {product: product.doc._id.toString(),
         quantity: product.quantity,
@@ -51,11 +60,11 @@ orderRouter.post('/', authenticateUser, async (req: AuthenticatedRequest<unknown
       }
     })
 
-    // For creating the new order document 
+    // Creates the new order document
     const newOrder = new Order({
       products: productsForNewOrder,
       user: user?._id.toString(),
-      total: total,
+      total: totalCost,
       status: 'placed'
     })
 

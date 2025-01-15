@@ -1,36 +1,20 @@
-Nowish:
-- Add error handler middlwear to catch zod and mongoose errors DONE
-- Add unknown endpoint endpoint DONE
+
+
 - Add login route DONE
-- Add authentication to required routes eg parse user DONE
-- Add error handler for invalid token DONE
-
 - Add funcitonality for loggin in an admin DONE
-  - Dont need to, user retrieved from id in token every request. (necessary?)
-- Add route for creating an admin DONE
-  - Was achieved with an endpoint that required admin authentication
-- Test deleting a user with either user authentication or admin authentication DONE
-
-
 - Add product routes DONE
-- Add script for resetting database with a user- dont delete the admin
-- Test product adding and paginated retrieval DONE
-- Add route for retreiving a single product, with populated description DONE
-- Add route for deleting a product, requires admin DONE
-- Add filters for category and price range DONE
-- Change category filter to use array and $in syntax for mongoose query DONE
-- Add instock filter DONE
 
 - Implement routes for orders
 - Add order model DONE
 - Add route for orders 
-  - Add zod validation for order ObjectId
-  - Add validation for stock of items in order
-- Add route for updating status of orders
+  - Add zod validation for order ObjectId DONE
+  - Add validation for stock of items in order DONE
+  
 - Implement task queue for sending email confirmation
 - Figue where to add payment in application
+- After creating basket object, let order route accept just a basket id to retrieve order details from once payment has been accepted
 
-- Ask chat gpt how i should structure my system for basket and orders
+- Ask gpt how i should structure my system for basket and orders
 - Implement routes for basket
 
   - Implement task queue for sending the confirmation email
@@ -40,6 +24,12 @@ Nowish:
 - Add order routes
 - Add admin authentication middlewear
 - 
+
+
+Basket Routes:
+- These routes will be responsible for reserving stock once placed in a basket
+- Task queue for releasing stock after a x minutes?
+
 
 Later
 - Add filters for product searching based on region, price, date added

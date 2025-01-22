@@ -4,6 +4,7 @@ import { AuthenticatedRequest, NewOrder } from '../types'
 import Product from '../models/Product'
 import mongoose from 'mongoose'
 import Order from '../models/Order'
+import paypal from '@paypal/paypal-server-sdk'
 
 const orderRouter = express.Router()
 
@@ -12,6 +13,11 @@ orderRouter.post('/', authenticateUser, async (req: AuthenticatedRequest<unknown
   const { products, total } = req.body
 
   const { user } = req
+
+  // Initialise paypal client
+  // Need read on OAuth2
+  // Need paypal clientID and clientSecret from paypal dev settings
+  const client = paypal.Client({})
 
   // For starting a transaction session
   const session = await mongoose.startSession()
@@ -50,7 +56,6 @@ orderRouter.post('/', authenticateUser, async (req: AuthenticatedRequest<unknown
       await doc.save()
       return {...product, doc}
     }))
-
 
     // Creates an array representing the list of products for the new order document
     const productsForNewOrder = productDocsStockChanged.map(product => {

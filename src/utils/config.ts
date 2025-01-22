@@ -19,4 +19,16 @@ if (!SECRET || typeof SECRET !== 'string'){
   throw new Error('environment SECRET not set!')
 }
 
-export default {PORT, MONGODB_URL, SECRET}
+const PAYPALCLIENTID = process.env.PAYPALCLIENTID
+
+if (!PAYPALCLIENTID || typeof PAYPALCLIENTID !== 'string'){
+  throw new Error('Paypal clientID not defined')
+}
+
+const PAYPALCLIENTSECRET = process.env.PAYPALCLIENTSECRET
+
+if (!PAYPALCLIENTSECRET || typeof PAYPALCLIENTSECRET !== 'string'){
+  throw new Error('Paypal client secret not set')
+}
+
+export default {PORT, MONGODB_URL, SECRET, PAYPALCLIENTID, PAYPALCLIENTSECRET}

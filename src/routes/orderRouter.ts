@@ -4,20 +4,16 @@ import { AuthenticatedRequest, NewOrder } from '../types'
 import Product from '../models/Product'
 import mongoose from 'mongoose'
 import Order from '../models/Order'
-import paypal from '@paypal/paypal-server-sdk'
+// import paypalClient from '../utils/paypalClient'
 
+// Baseurl is /api/orders
 const orderRouter = express.Router()
 
-// Route for creating a new order and reducing the stock count
+// Route for creating a new order and reducing the stock count, 
+
 orderRouter.post('/', authenticateUser, async (req: AuthenticatedRequest<unknown, unknown, NewOrder>, res: Response) => {
-  const { products, total } = req.body
-
+  const { products } = req.body
   const { user } = req
-
-  // Initialise paypal client
-  // Need read on OAuth2
-  // Need paypal clientID and clientSecret from paypal dev settings
-  const client = paypal.Client({})
 
   // For starting a transaction session
   const session = await mongoose.startSession()
@@ -83,7 +79,7 @@ orderRouter.post('/', authenticateUser, async (req: AuthenticatedRequest<unknown
     res.status(201).json({orderId: newOrder._id.toString()})
 
     // TODO
-    // Needs to delete the basked if order placed successfully 
+    // Needs to delete the basket/cart if order placed successfully 
 
   } catch (error: unknown){
     // If error is thrown, transaction aborted and changes rolled back

@@ -15,13 +15,13 @@ export type NewProduct = z.infer<typeof NewProductSchema>
 // Interface for defining the type of an object that contains the exposable fields for a user
 export interface ExposableUser {
   name: string,
-  username: string,
+  email: string,
   id: string
 }
 
 export interface UserDocument {
   name: string,
-  username: string,
+  email: string,
   _id: mongoose.Types.ObjectId,
   isAdmin: boolean,
   orders: mongoose.Types.ObjectId[]

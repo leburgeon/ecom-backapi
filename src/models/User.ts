@@ -1,9 +1,8 @@
 import mongoose from 'mongoose'
 
 const userSchema = new mongoose.Schema({
-  username: {
+  email: {
     type: String,
-    minLength: 5,
     required: true,
     unique: true
   },

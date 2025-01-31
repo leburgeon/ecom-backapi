@@ -17,17 +17,25 @@ const middlewear_1 = require("../utils/middlewear");
 const Product_1 = __importDefault(require("../models/Product"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const Order_1 = __importDefault(require("../models/Order"));
+// import paypalClient from '../utils/paypalClient'
+// Baseurl is /api/orders
 const orderRouter = express_1.default.Router();
-// Route for creating a new order and reducing the stock count
+// Route for creating a new order and reducing the stock count, 
 orderRouter.post('/', middlewear_1.authenticateUser, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { products, total } = req.body;
+    const { products } = req.body;
     const { user } = req;
     // For starting a transaction session
     const session = yield mongoose_1.default.startSession();
     session.startTransaction();
+    // Try block attempts to perform the database updates within the transaction
+    // If an error thrown within try block, transaction aborted
     try {
-        // Validates that each of the products exists and has adequate stock reserved
-        // Then saves each of the updated products stock
+        // For each of the products in the array, this block attempts to:
+        // - Validate that the product exists, throwing an error if it is not found
+        // - Asserts that there is sufficient stock for the quantity of the product
+        // - Decrement the amount of stock from the stock reserve
+        // - Save the stock updated document
+        let totalCost = 0;
         const productDocsStockChanged = yield Promise.all(products.map((product) => __awaiter(void 0, void 0, void 0, function* () {
             const doc = yield Product_1.default.findById(product.id).session(session);
             // Asserts that the product with the id exists
@@ -38,24 +46,26 @@ orderRouter.post('/', middlewear_1.authenticateUser, (req, res) => __awaiter(voi
             if (product.quantity > doc.stock.reserved) {
                 throw new Error(`Insufficient stock for ${doc.name} x ${product.quantity}`);
             }
+            // Updates the cost total 
+            totalCost += (doc.price * product.quantity);
             // Decrements the stock reserve and returns the document (not saved)
             doc.stock.reserved -= product.quantity;
             // Then attempts to save the doc
             yield doc.save();
             return Object.assign(Object.assign({}, product), { doc });
         })));
-        // Products array for new order
+        // Creates an array representing the list of products for the new order document
         const productsForNewOrder = productDocsStockChanged.map(product => {
             return { product: product.doc._id.toString(),
                 quantity: product.quantity,
                 price: product.doc.price
             };
         });
-        // For creating the new order document 
+        // Creates the new order document
         const newOrder = new Order_1.default({
             products: productsForNewOrder,
             user: user === null || user === void 0 ? void 0 : user._id.toString(),
-            total: total,
+            total: totalCost,
             status: 'placed'
         });
         // Saves the new order
@@ -65,7 +75,7 @@ orderRouter.post('/', middlewear_1.authenticateUser, (req, res) => __awaiter(voi
         // Sends confirmation that the order has been created
         res.status(201).json({ orderId: newOrder._id.toString() });
         // TODO
-        // Needs to delete the basked if order placed successfully 
+        // Needs to delete the basket/cart if order placed successfully 
     }
     catch (error) {
         // If error is thrown, transaction aborted and changes rolled back
@@ -81,3 +91,4 @@ orderRouter.post('/', middlewear_1.authenticateUser, (req, res) => __awaiter(voi
         yield session.endSession();
     }
 }));
+exports.default = orderRouter;

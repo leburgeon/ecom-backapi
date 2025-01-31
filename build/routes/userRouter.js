@@ -31,10 +31,10 @@ userRouter.get('/', middlewear_1.authenticateAdmin, (req, res, next) => __awaite
 // TODO Route for getting the data for a single user, returns the user and populated order data
 // Route for adding a new user
 userRouter.post('/', middlewear_1.parseNewUser, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { name, username, password } = req.body;
+    const { name, email, password } = req.body;
     const passwordHash = yield bcryptjs_1.default.hash(password, 10);
     try {
-        const newUser = new User_1.default({ name, username, passwordHash });
+        const newUser = new User_1.default({ name, email, passwordHash });
         yield newUser.save();
         res.status(201).json(newUser);
     }
@@ -44,10 +44,10 @@ userRouter.post('/', middlewear_1.parseNewUser, (req, res, next) => __awaiter(vo
 }));
 // Route for adding a new admin user, request must be authenticated as coming from an existing admin
 userRouter.post('/admin', middlewear_1.authenticateAdmin, middlewear_1.parseNewUser, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { name, username, password } = req.body;
+    const { name, email, password } = req.body;
     const passwordHash = yield bcryptjs_1.default.hash(password, 10);
     try {
-        const newUser = new User_1.default({ name, username, passwordHash, isAdmin: true });
+        const newUser = new User_1.default({ name, email, passwordHash, isAdmin: true });
         yield newUser.save();
         res.status(201).json({ newUser });
     }

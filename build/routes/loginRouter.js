@@ -21,10 +21,10 @@ const config_1 = __importDefault(require("../utils/config"));
 const loginRouter = express_1.default.Router();
 // Router for handing login requests
 loginRouter.post('/', middlewear_1.parseLoginCredentials, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { username, password } = req.body;
+    const { email, password } = req.body;
     try {
         // Attempts to find the user and compares the provided password to the password hash
-        const authenticatingUser = yield User_1.default.findOne({ username });
+        const authenticatingUser = yield User_1.default.findOne({ email });
         if (!authenticatingUser || !(yield bcryptjs_1.default.compare(password, authenticatingUser.passwordHash))) {
             // If the user is not found or the password is incorrect sends the error message
             res.status(400).send({ error: "username/password incorrect" });
@@ -32,14 +32,14 @@ loginRouter.post('/', middlewear_1.parseLoginCredentials, (req, res, next) => __
         else {
             // The payload to include in the token, expires in 4h
             const payload = {
-                username: authenticatingUser.username,
+                email: authenticatingUser.email,
                 name: authenticatingUser.name,
                 id: authenticatingUser._id.toString()
             };
             // Signs the token and sends as the body of the response with status 200
             const token = jsonwebtoken_1.default.sign(payload, config_1.default.SECRET, { expiresIn: 3600 * 4 });
             res.status(200).json({
-                username: authenticatingUser.username,
+                username: authenticatingUser.email,
                 name: authenticatingUser.name,
                 token
             });

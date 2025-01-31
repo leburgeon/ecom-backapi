@@ -4,7 +4,7 @@ exports.NewOrderSchema = exports.PaginationDetailsSchema = exports.JwtUserPayloa
 const zod_1 = require("zod");
 exports.NewUserSchema = zod_1.z.object({
     name: zod_1.z.string(),
-    username: zod_1.z.string().trim().min(5).toLowerCase(),
+    email: zod_1.z.string().email().trim().toLowerCase(),
     password: zod_1.z.string().min(5)
 });
 exports.NewProductSchema = zod_1.z.object({
@@ -15,11 +15,11 @@ exports.NewProductSchema = zod_1.z.object({
     inStock: zod_1.z.coerce.boolean()
 });
 exports.LoginCredentialsSchema = zod_1.z.object({
-    username: zod_1.z.string(),
+    email: zod_1.z.string().email().toLowerCase().trim(),
     password: zod_1.z.string()
 });
 exports.JwtUserPayloadSchema = zod_1.z.object({
-    username: zod_1.z.string(),
+    email: zod_1.z.string().email().toLowerCase().trim(),
     name: zod_1.z.string(),
     id: zod_1.z.string()
 });
@@ -31,6 +31,5 @@ exports.NewOrderSchema = zod_1.z.object({
     products: zod_1.z.object({
         id: zod_1.z.string(),
         quantity: zod_1.z.coerce.number()
-    }).array(),
-    total: zod_1.z.coerce.number()
+    }).array()
 });

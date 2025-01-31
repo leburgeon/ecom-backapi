@@ -22,11 +22,11 @@ userRouter.get('/', authenticateAdmin, async (req: AuthenticatedRequest, res: Re
 
 // Route for adding a new user
 userRouter.post('/', parseNewUser, async (req: Request<unknown, unknown, NewUser>, res: Response, next: NextFunction) => {
-  const { name, username, password } = req.body
+  const { name, email, password } = req.body
   const passwordHash = await bcrypt.hash(password, 10)
 
   try {
-    const newUser = new User({name, username, passwordHash})
+    const newUser = new User({name, email, passwordHash})
     await newUser.save()
     res.status(201).json(newUser)
   } catch (error: unknown) {
@@ -36,10 +36,10 @@ userRouter.post('/', parseNewUser, async (req: Request<unknown, unknown, NewUser
 
 // Route for adding a new admin user, request must be authenticated as coming from an existing admin
 userRouter.post('/admin', authenticateAdmin, parseNewUser, async (req: Request<unknown, unknown, NewUser>, res: Response, next: NextFunction) => {
-  const { name, username, password } = req.body
+  const { name, email, password } = req.body
   const passwordHash = await bcrypt.hash(password, 10)
   try {
-    const newUser = new User({name, username, passwordHash, isAdmin: true})
+    const newUser = new User({name, email, passwordHash, isAdmin: true})
     await newUser.save()
     res.status(201).json({newUser})
   } catch (error: unknown){

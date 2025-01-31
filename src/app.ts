@@ -4,8 +4,11 @@ import userRouter from './routes/userRouter'
 import loginRouter from './routes/loginRouter'
 import productRouter from './routes/productRouter'
 import orderRouter from './routes/orderRouter'
+import cors from 'cors'
 
 const app = express()
+
+app.use(cors())
 
 app.use(express.json())
 

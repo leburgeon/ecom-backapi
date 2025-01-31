@@ -8,7 +8,10 @@ const middlewear_1 = require("./utils/middlewear");
 const userRouter_1 = __importDefault(require("./routes/userRouter"));
 const loginRouter_1 = __importDefault(require("./routes/loginRouter"));
 const productRouter_1 = __importDefault(require("./routes/productRouter"));
+const orderRouter_1 = __importDefault(require("./routes/orderRouter"));
+const cors_1 = __importDefault(require("cors"));
 const app = (0, express_1.default)();
+app.use((0, cors_1.default)());
 app.use(express_1.default.json());
 app.get('/ping', (_req, res) => {
     res.send('pong');
@@ -16,6 +19,7 @@ app.get('/ping', (_req, res) => {
 app.use('/api/users', userRouter_1.default);
 app.use('/api/login', loginRouter_1.default);
 app.use('/api/products', productRouter_1.default);
+app.use('/api/orders', orderRouter_1.default);
 app.use((_req, res) => {
     res.status(400).json({ error: 'Uknown endpoint' });
 });

@@ -12,7 +12,7 @@ const productRouter = express.Router()
 // Route for retrieving the products 
 productRouter.get('/', parsePagination, async (req: Request, res: Response, next: NextFunction) => {
 
-  const { categories, minPrice, maxPrice, inStock } = req.query
+  const { categories, minPrice, maxPrice, inStock, search } = req.query
   const filters: any = {}
 
   // For adding a filter to only include the filtered categories

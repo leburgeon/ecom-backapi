@@ -12,14 +12,14 @@ const productRouter = express.Router()
 // Route for retrieving the products 
 productRouter.get('/', parsePagination, async (req: Request, res: Response, next: NextFunction) => {
 
-  const { categories, minPrice, maxPrice, inStock } = req.query
+  const { category, minPrice, maxPrice, inStock } = req.query
   const filters: any = {}
 
   // For adding a filter to only include the filtered categories
-  if (categories && z.string().array().parse(categories)){
-    const categoriesArray = (categories as String).split(',')
-    filters.category = {
-      $in: categoriesArray
+  if (category && z.string().parse(category)){
+    
+    filters.categories = {
+      $in: [category] 
     }
   }
 

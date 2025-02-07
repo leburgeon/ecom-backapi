@@ -1,23 +1,12 @@
 import mongoose from 'mongoose'
 
-const stockSchema = new mongoose.Schema({
-  quantity: {
-    type: Number,
-    default: 0
-  },
-  reserved: {
-    type: Number,
-    default: 0
-  }
-})
-
 const productSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true
   },
-  category: {
-    type: String,
+  categories: {
+    type: [String],
     required: true
   },
   price: {
@@ -25,13 +14,26 @@ const productSchema = new mongoose.Schema({
     required: true
   },
   stock: {
-    type: stockSchema,
+    type: {
+      quantity: {
+        type: Number,
+        required: true
+      },
+      reserved: {
+        type: Number,
+        required: true
+      }
+    },
     required: true
   },
   description: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
     ref: 'Description'
+  },
+  firstImage: {
+    type: String,
+    required: true
   }
 })
 

@@ -17,10 +17,9 @@ productRouter.get('/', parsePagination, async (req: Request, res: Response, next
 
   // For adding a filter to only include the filtered categories
   if (categories && z.string().array().parse(categories)){
-    console.log('#################################')
-    console.log()
+    const categoriesArray = (categories as String).split(',')
     filters.category = {
-      $in: categories as string[]
+      $in: categoriesArray
     }
   }
 
@@ -46,8 +45,9 @@ productRouter.get('/', parsePagination, async (req: Request, res: Response, next
 
   // Retrieves and returns the correct products according to the pagination provided
   try {
+    const productsCount = await Product.countDocuments(filters)
     const products = await Product.find(filters).limit(limit).skip((page - 1) * limit)
-    res.status(200).json(products)
+    res.status(200).json({products, productsCount})
   } catch (error: unknown) {
     next(error)
   }

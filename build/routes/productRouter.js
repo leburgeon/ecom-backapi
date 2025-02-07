@@ -25,10 +25,9 @@ productRouter.get('/', middlewear_1.parsePagination, (req, res, next) => __await
     const filters = {};
     // For adding a filter to only include the filtered categories
     if (categories && zod_1.z.string().array().parse(categories)) {
-        console.log('#################################');
-        console.log();
+        const categoriesArray = categories.split(',');
         filters.category = {
-            $in: categories
+            $in: categoriesArray
         };
     }
     // For adding filters for the min and max values for price if they exist
@@ -49,8 +48,9 @@ productRouter.get('/', middlewear_1.parsePagination, (req, res, next) => __await
     const limit = parseInt(req.query.limit) || 10;
     // Retrieves and returns the correct products according to the pagination provided
     try {
+        const productsCount = yield Product_1.default.countDocuments(filters);
         const products = yield Product_1.default.find(filters).limit(limit).skip((page - 1) * limit);
-        res.status(200).json(products);
+        res.status(200).json({ products, productsCount });
     }
     catch (error) {
         next(error);

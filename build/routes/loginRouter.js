@@ -27,7 +27,7 @@ loginRouter.post('/', middlewear_1.parseLoginCredentials, (req, res, next) => __
         const authenticatingUser = yield User_1.default.findOne({ email });
         if (!authenticatingUser || !(yield bcryptjs_1.default.compare(password, authenticatingUser.passwordHash))) {
             // If the user is not found or the password is incorrect sends the error message
-            res.status(400).send({ error: "username/password incorrect" });
+            res.status(400).send({ error: "email/password combination incorrect" });
         }
         else {
             // The payload to include in the token, expires in 4h
@@ -39,7 +39,7 @@ loginRouter.post('/', middlewear_1.parseLoginCredentials, (req, res, next) => __
             // Signs the token and sends as the body of the response with status 200
             const token = jsonwebtoken_1.default.sign(payload, config_1.default.SECRET, { expiresIn: 3600 * 4 });
             res.status(200).json({
-                username: authenticatingUser.email,
+                email: authenticatingUser.email,
                 name: authenticatingUser.name,
                 token
             });

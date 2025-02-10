@@ -45,13 +45,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.errorHandler = exports.parseNewOrder = exports.parsePagination = exports.parseLoginCredentials = exports.parseNewProduct = exports.parseNewUser = exports.authenticateAdmin = exports.authenticateUser = void 0;
+exports.errorHandler = exports.parseFilters = exports.parseNewOrder = exports.parsePagination = exports.parseLoginCredentials = exports.parseNewProduct = exports.parseNewUser = exports.authenticateAdmin = exports.authenticateUser = void 0;
 const validators_1 = require("./validators");
 const mongoose_1 = __importDefault(require("mongoose"));
 const zod_1 = require("zod");
 const jsonwebtoken_1 = __importStar(require("jsonwebtoken"));
 const config_1 = __importDefault(require("./config"));
 const User_1 = __importDefault(require("../models/User"));
+const zod_2 = require("zod");
 // Middlewear for parsing the new request and ensuring that the request has fiels for page limit and page number 
 // Middlewear for authenticating a user and extracting the user info into the request
 const authenticateUser = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
@@ -168,6 +169,40 @@ const parseNewOrder = (req, _res, next) => {
     }
 };
 exports.parseNewOrder = parseNewOrder;
+const parseFilters = (req, _res, next) => {
+    const { category, minPrice, maxPrice, inStockOnly, query } = req.query;
+    console.log("Query: ", req.query);
+    const filters = {};
+    // For adding a filter for the search query
+    if (query && zod_2.z.string().safeParse(query)) {
+        filters.name = {
+            $regex: query,
+            $options: "i"
+        };
+    }
+    // For adding a filter to only include results that contain the given category in their list
+    if (category && zod_2.z.string().safeParse(category)) {
+        if (category !== 'null') {
+            filters.categories = {
+                $in: [category]
+            };
+        }
+    }
+    // For adding filters for the min and max values for price if they exist
+    if (minPrice && !isNaN(Number(minPrice))) {
+        filters.price = Object.assign(Object.assign({}, filters.price), { $gte: Number(minPrice) });
+    }
+    if (maxPrice && !isNaN(Number(maxPrice))) {
+        filters.price = Object.assign(Object.assign({}, filters.price), { $lte: Number(maxPrice) });
+    }
+    // For adding a filter to only return instock items
+    if (inStockOnly && inStockOnly === 'true') {
+        filters['stock.quantity'] = { $gte: 1 };
+    }
+    req.filters = filters;
+    next();
+};
+exports.parseFilters = parseFilters;
 // Error handler for the application
 const errorHandler = (error, _req, res, _next) => {
     if (error instanceof mongoose_1.default.Error.ValidationError) { // For handling a mongoose validation error

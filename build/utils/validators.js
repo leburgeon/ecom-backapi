@@ -9,10 +9,12 @@ exports.NewUserSchema = zod_1.z.object({
 });
 exports.NewProductSchema = zod_1.z.object({
     name: zod_1.z.string(),
-    category: zod_1.z.string(),
+    categories: zod_1.z.string().array(),
     price: zod_1.z.coerce.number(),
     description: zod_1.z.string().min(10),
-    inStock: zod_1.z.coerce.boolean()
+    initialStock: zod_1.z.coerce.number(),
+    firstImage: zod_1.z.string().url(),
+    seller: zod_1.z.string()
 });
 exports.LoginCredentialsSchema = zod_1.z.object({
     email: zod_1.z.string().email().toLowerCase().trim(),

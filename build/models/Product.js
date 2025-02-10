@@ -38,6 +38,22 @@ const productSchema = new mongoose_1.default.Schema({
     firstImage: {
         type: String,
         required: true
+    },
+    seller: {
+        type: String,
+        required: true
+    },
+    rating: {
+        type: {
+            total: {
+                type: Number,
+                default: 0
+            },
+            count: {
+                type: Number,
+                default: 0
+            }
+        }
     }
 });
 productSchema.set('toJSON', {

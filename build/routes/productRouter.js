@@ -16,33 +16,11 @@ const express_1 = __importDefault(require("express"));
 const middlewear_1 = require("../utils/middlewear");
 const Product_1 = __importDefault(require("../models/Product"));
 const Description_1 = __importDefault(require("../models/Description"));
-const zod_1 = require("zod");
 const productRouter = express_1.default.Router();
 // TODO add filtering based on category or price range
 // Route for retrieving the products 
-productRouter.get('/', middlewear_1.parsePagination, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { categories, minPrice, maxPrice, inStock } = req.query;
-    const filters = {};
-    // For adding a filter to only include the filtered categories
-    if (categories && zod_1.z.string().array().parse(categories)) {
-        const categoriesArray = categories.split(',');
-        filters.category = {
-            $in: categoriesArray
-        };
-    }
-    // For adding filters for the min and max values for price if they exist
-    if (minPrice && !isNaN(Number(minPrice))) {
-        filters.price = Object.assign(Object.assign({}, filters.price), { $gte: Number(minPrice) });
-    }
-    if (maxPrice && !isNaN(Number(maxPrice))) {
-        filters.price = Object.assign(Object.assign({}, filters.price), { $lte: Number(maxPrice) });
-    }
-    // For adding a filter to only return instock items
-    if (inStock && inStock === 'true') {
-        filters['stock.quantity'] = { $gte: 1 };
-    }
-    console.log('#################################');
-    console.log(filters);
+productRouter.get('/', middlewear_1.parsePagination, middlewear_1.parseFilters, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const filters = req.filters;
     // Parses the query strings to integers
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -53,6 +31,19 @@ productRouter.get('/', middlewear_1.parsePagination, (req, res, next) => __await
         res.status(200).json({ products, productsCount });
     }
     catch (error) {
+        next(error);
+    }
+}));
+productRouter.get('/pageof/', middlewear_1.parsePagination, middlewear_1.parseFilters, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const filters = req.filters;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    try {
+        const products = yield Product_1.default.find(filters).limit(limit).skip((page - 1) * limit);
+        res.status(200).json(products);
+    }
+    catch (error) {
+        console.error('Error with pageof route', error);
         next(error);
     }
 }));
@@ -88,10 +79,10 @@ productRouter.delete('/:id', middlewear_1.authenticateAdmin, (req, res, next) =>
 }));
 // Route for adding a new product document
 productRouter.post('/', middlewear_1.authenticateAdmin, middlewear_1.parseNewProduct, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { name, category, price, description, inStock } = req.body;
+    const { name, categories, price, description } = req.body;
     try {
         // First creates the new product document
-        const newProduct = new Product_1.default({ name, category, price, inStock });
+        const newProduct = new Product_1.default({ name, categories, price });
         // Then the new description is added for the product
         // Product field is the id of the new product document
         const newProdcutDescription = new Description_1.default({

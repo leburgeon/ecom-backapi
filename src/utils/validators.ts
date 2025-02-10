@@ -8,10 +8,12 @@ export const NewUserSchema = z.object({
 
 export const NewProductSchema = z.object({
   name: z.string(),
-  category: z.string(),
+  categories: z.string().array(),
   price: z.coerce.number(),
   description: z.string().min(10),
-  inStock: z.coerce.boolean()
+  initialStock: z.coerce.number(),
+  firstImage: z.string().url(),
+  seller: z.string()
 })
 
 export const LoginCredentialsSchema = z.object({

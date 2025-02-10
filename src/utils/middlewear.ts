@@ -5,7 +5,8 @@ import { ZodError } from "zod"
 import jwt, { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 import config from "./config"
 import User from "../models/User"
-import { AuthenticatedRequest} from "../types"
+import { AuthenticatedRequest, RequestWithSearchFilters } from "../types"
+import { z } from 'zod'
 
 // Middlewear for parsing the new request and ensuring that the request has fiels for page limit and page number 
 
@@ -117,6 +118,46 @@ export const parseNewOrder = (req: Request, _res: Response, next: NextFunction) 
   } catch (error: unknown) {
     next(error)
   }
+}
+
+export const parseFilters = (req: RequestWithSearchFilters, _res: Response, next: NextFunction) => {
+  const { category, minPrice, maxPrice, inStockOnly, query } = req.query
+  console.log("Query: ",req.query)
+  const filters: any = {}
+
+  // For adding a filter for the search query
+  if (query && z.string().safeParse(query)){
+    filters.name = {
+      $regex: query,
+      $options: "i"
+    }
+  }
+
+  // For adding a filter to only include results that contain the given category in their list
+  if (category && z.string().safeParse(category)){
+    if (category !== 'null'){
+      filters.categories = {
+        $in: [category]
+      }
+    }
+  }
+
+  // For adding filters for the min and max values for price if they exist
+  if (minPrice && !isNaN(Number(minPrice))){
+    filters.price = {...filters.price, $gte: Number(minPrice)}
+  }
+  if (maxPrice && !isNaN(Number(maxPrice))){
+    filters.price = {...filters.price, $lte: Number(maxPrice)}
+  }
+
+  // For adding a filter to only return instock items
+  if (inStockOnly && inStockOnly === 'true') {
+    filters['stock.quantity'] = { $gte: 1 }
+  }
+
+  req.filters = filters
+
+  next()
 }
 
 // Error handler for the application

@@ -1,45 +1,17 @@
 import express, {NextFunction, Response, Request} from 'express'
-import { authenticateAdmin,  parseNewProduct, parsePagination } from '../utils/middlewear'
-import { NewProduct } from '../types'
+import { authenticateAdmin,  parseNewProduct, parsePagination, parseFilters } from '../utils/middlewear'
+import { NewProduct, RequestWithSearchFilters } from '../types'
 import Product from '../models/Product'
 import Description from '../models/Description'
 import mongoose from 'mongoose'
-import { z } from 'zod'
 
 const productRouter = express.Router()
 
 // TODO add filtering based on category or price range
 // Route for retrieving the products 
-productRouter.get('/', parsePagination, async (req: Request, res: Response, next: NextFunction) => {
-
-  const { category, minPrice, maxPrice, inStock } = req.query
-  const filters: any = {}
-
-  // For adding a filter to only include the filtered categories
-  if (category && z.string().parse(category)){
-    
-    filters.categories = {
-      $in: [category] 
-    }
-  }
-
-  // For adding filters for the min and max values for price if they exist
-  if (minPrice && !isNaN(Number(minPrice))){
-    filters.price = {...filters.price, $gte: Number(minPrice)}
-  }
-  if (maxPrice && !isNaN(Number(maxPrice))){
-    filters.price = {...filters.price, $lte: Number(maxPrice)}
-  }
-
-  // For adding a filter to only return instock items
-  if (inStock && inStock === 'true') {
-    filters['stock.quantity'] = { $gte: 1 }
-  }
-
-  console.log('#################################')
-  console.log(filters)
-
-  // Parses the query strings to integers
+productRouter.get('/', parsePagination, parseFilters, async (req: RequestWithSearchFilters, res: Response, next: NextFunction) => {
+  const filters = req.filters
+ // Parses the query strings to integers
   const page = parseInt(req.query.page as string) || 1
   const limit = parseInt(req.query.limit as string) || 10
 
@@ -51,6 +23,21 @@ productRouter.get('/', parsePagination, async (req: Request, res: Response, next
   } catch (error: unknown) {
     next(error)
   }
+})
+
+productRouter.get('/pageof/', parsePagination, parseFilters, async (req: RequestWithSearchFilters, res: Response, next: NextFunction) => {
+  const filters = req.filters
+  const page = parseInt(req.query.page as string) || 1
+  const limit = parseInt(req.query.limit as string) || 10
+
+  try {
+    const products = await Product.find(filters).limit(limit).skip((page - 1) * limit)
+    res.status(200).json(products)
+  } catch (error) {
+    console.error('Error with pageof route', error)
+    next(error)
+  }
+
 })
 
 // Route for retrieving a single product from the database and populating it
@@ -85,12 +72,11 @@ productRouter.delete('/:id', authenticateAdmin, async (req: Request, res: Respon
 
 // Route for adding a new product document
 productRouter.post('/', authenticateAdmin, parseNewProduct, async (req: Request<unknown, unknown, NewProduct>, res: Response, next: NextFunction) => {
-  const { name, category, price, description, inStock } = req.body
+  const { name, categories, price, description} = req.body
 
   try {
-
     // First creates the new product document
-    const newProduct = new Product({name, category, price, inStock})
+    const newProduct = new Product({name, categories, price})
 
     // Then the new description is added for the product
     // Product field is the id of the new product document

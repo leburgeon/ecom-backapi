@@ -34,6 +34,22 @@ const productSchema = new mongoose.Schema({
   firstImage: {
     type: String,
     required: true
+  },
+  seller: {
+    type: String,
+    required: true
+  },
+  rating: {
+    type: {
+      total: {
+        type: Number,
+        default: 0
+      },
+      count: {
+        type: Number,
+        default: 0
+      }
+    }
   }
 })
 

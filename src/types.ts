@@ -40,6 +40,14 @@ export interface AuthenticatedRequest<
   user?: UserDocument
 }
 
+export interface RequestWithSearchFilters<
+  P = any, 
+  ResBody = any,
+  ReqBody = any 
+> extends Request<P, ResBody, ReqBody>{
+  filters?: any
+}
+
 // Interface extending the express request, whos quiery attribute contains a page and a limit field
 export interface PageQueriesRequest extends Request {
   query: {

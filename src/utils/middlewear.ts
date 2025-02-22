@@ -160,6 +160,14 @@ export const parseFilters = (req: RequestWithSearchFilters, _res: Response, next
   next()
 }
 
+export const requestLogger = (req: Request, _res: Response, next: NextFunction) => {
+  const method = req.method
+  const url = req.originalUrl
+  const body = req.body
+  console.log(`Method: ${method} Url: ${url} Body: ${body}`)
+  next()
+}
+
 // Error handler for the application
 export const errorHandler = (error: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (error instanceof mongoose.Error.ValidationError) {  // For handling a mongoose validation error

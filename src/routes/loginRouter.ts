@@ -25,7 +25,7 @@ loginRouter.post('/', parseLoginCredentials, async (req: Request<unknown, unknow
         id: authenticatingUser._id.toString()
       }
       // Signs the token and sends as the body of the response with status 200
-      const token = jwt.sign(payload, config.SECRET, {expiresIn: 3600*4})
+      const token = jwt.sign(payload, config.SECRET, {expiresIn: '5s'})
       res.status(200).json({
         email: authenticatingUser.email,
         name: authenticatingUser.name,

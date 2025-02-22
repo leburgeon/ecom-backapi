@@ -1,5 +1,5 @@
 import express from 'express'
-import { errorHandler } from './utils/middlewear'
+import { errorHandler, requestLogger } from './utils/middlewear'
 import userRouter from './routes/userRouter'
 import loginRouter from './routes/loginRouter'
 import productRouter from './routes/productRouter'
@@ -12,9 +12,7 @@ app.use(cors())
 
 app.use(express.json())
 
-app.get('/ping', (_req, res) => {
-  res.send('pong')
-})
+app.use(requestLogger)
 
 app.use('/api/users', userRouter)
 

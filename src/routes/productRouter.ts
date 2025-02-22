@@ -45,7 +45,8 @@ productRouter.get('/:id', async (req: Request, res: Response, next: NextFunction
   const { id } = req.params
 
   try {
-    const productToReturn = await Product.findById(id)
+    const productToReturn = await Product.findById(id).populate('description')
+    console.log('Product after population: ', productToReturn)
     if (!productToReturn) {
       res.status(404).json('Product not found')
     } else {

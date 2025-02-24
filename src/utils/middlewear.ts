@@ -152,7 +152,7 @@ export const parseFilters = (req: RequestWithSearchFilters, _res: Response, next
 
   // For adding a filter to only return instock items
   if (inStockOnly && inStockOnly === 'true') {
-    filters['stock.quantity'] = { $gte: 1 }
+    filters['stock'] = { $gte: 1 }
   }
 
   req.filters = filters

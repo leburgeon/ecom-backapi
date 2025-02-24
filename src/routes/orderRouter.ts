@@ -43,7 +43,7 @@ orderRouter.post('/', authenticateUser, async (req: AuthenticatedRequest<unknown
       }
       
       // Asserts that there is sufficient quantity in the reserved stock and throws error if not
-      if (product.quantity > doc.stock.reserved){
+      if (product.quantity > doc.stock){
         throw new Error(`Insufficient stock for ${doc.name} x ${product.quantity}`)
       }
 
@@ -51,7 +51,7 @@ orderRouter.post('/', authenticateUser, async (req: AuthenticatedRequest<unknown
       totalCost += (doc.price * product.quantity)
 
       // Decrements the stock reserve and returns the document (not saved)
-      doc.stock.reserved -= product.quantity
+      doc.stock -= product.quantity
 
       // Then attempts to save the doc
       await doc.save()

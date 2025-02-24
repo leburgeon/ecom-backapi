@@ -1,36 +1,21 @@
+FRONTEND: 
+  - Out of stock items look different on product page
+  - Warning for low stock items, and message that stock will be reserved for x minutes
 
+BACKEND:
+  - 
 
-- Add login route DONE
-- Add funcitonality for loggin in an admin DONE
-- Add product routes DONE
-
-- Implement routes for orders
-- Add order model DONE
-- Add route for orders 
-  - Add zod validation for order ObjectId DONE
-  - Add validation for stock of items in order DONE
-  
-- Implement task queue for sending email confirmation
-- Figue where to add payment in application
-- After creating basket object, let order route accept just a basket id to retrieve order details from once payment has been accepted
-
-- Ask gpt how i should structure my system for basket and orders
-- Implement routes for basket
-
-  - Implement task queue for sending the confirmation email
-  - Look up how to send emails from a node server
-
-
-- Add order routes
-- Add admin authentication middlewear
-- 
-
-
-Basket Routes:
-- These routes will be responsible for reserving stock once placed in a basket
-- Task queue for releasing stock after a x minutes?
-
+TODOS:
+- Create MVP for basket, ie simple route that adds item to basket if there is stock available
+  - Change the product Model to remove resrved and have single quantity
+  - Create the Basket model for the user
+- Simple stock validation for checkout
+- Implement the soft reservation system
+  - Updated route for adding to basket, that creates reservations when ls
+  - Background tasks for removing reservations
+  - Web sockets for notifying users that an item in their basket is out of stock
+ 
 
 Later
-- Add filters for product searching based on region, price, date added
-- Add pagination for retrieving products
+- Add database sharding for category
+- Add an index for user of orders

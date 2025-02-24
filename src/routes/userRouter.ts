@@ -7,7 +7,7 @@ import bcrypt from 'bcryptjs'
 const userRouter = express.Router()
 
 // Route for returning a list of the users in the database
-userRouter.get('/', authenticateAdmin, async (req: AuthenticatedRequest, res: Response, next) => {
+userRouter.get('', authenticateAdmin, async (req: AuthenticatedRequest, res: Response, next) => {
   console.log('Authenticated user: ', req.user)
   try {
     const allUsers = await User.find({})
@@ -21,7 +21,7 @@ userRouter.get('/', authenticateAdmin, async (req: AuthenticatedRequest, res: Re
 
 
 // Route for adding a new user
-userRouter.post('/', parseNewUser, async (req: Request<unknown, unknown, NewUser>, res: Response, next: NextFunction) => {
+userRouter.post('', parseNewUser, async (req: Request<unknown, unknown, NewUser>, res: Response, next: NextFunction) => {
   const { name, email, password } = req.body
   const passwordHash = await bcrypt.hash(password, 10)
 

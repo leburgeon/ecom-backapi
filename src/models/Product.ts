@@ -14,17 +14,8 @@ const productSchema = new mongoose.Schema({
     required: true
   },
   stock: {
-    type: {
-      quantity: {
-        type: Number,
-        required: true
-      },
-      reserved: {
-        type: Number,
-        required: true
-      }
-    },
-    required: true
+    type: Number,
+    default: 0
   },
   description: {
     type: mongoose.Schema.Types.ObjectId,

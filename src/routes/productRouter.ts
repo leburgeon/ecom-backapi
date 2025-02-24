@@ -9,7 +9,7 @@ const productRouter = express.Router()
 
 // TODO add filtering based on category or price range
 // Route for retrieving the products 
-productRouter.get('/', parsePagination, parseFilters, async (req: RequestWithSearchFilters, res: Response, next: NextFunction) => {
+productRouter.get('', parsePagination, parseFilters, async (req: RequestWithSearchFilters, res: Response, next: NextFunction) => {
   const filters = req.filters
  // Parses the query strings to integers
   const page = parseInt(req.query.page as string) || 1
@@ -25,7 +25,7 @@ productRouter.get('/', parsePagination, parseFilters, async (req: RequestWithSea
   }
 })
 
-productRouter.get('/pageof/', parsePagination, parseFilters, async (req: RequestWithSearchFilters, res: Response, next: NextFunction) => {
+productRouter.get('/pageof', parsePagination, parseFilters, async (req: RequestWithSearchFilters, res: Response, next: NextFunction) => {
   const filters = req.filters
   const page = parseInt(req.query.page as string) || 1
   const limit = parseInt(req.query.limit as string) || 10
@@ -45,7 +45,7 @@ productRouter.get('/:id', async (req: Request, res: Response, next: NextFunction
   const { id } = req.params
 
   try {
-    const productToReturn = await Product.findById(id).populate('description')
+    const productToReturn = await Product.findById(id)
     console.log('Product after population: ', productToReturn)
     if (!productToReturn) {
       res.status(404).json('Product not found')
@@ -72,7 +72,7 @@ productRouter.delete('/:id', authenticateAdmin, async (req: Request, res: Respon
 })
 
 // Route for adding a new product document
-productRouter.post('/', authenticateAdmin, parseNewProduct, async (req: Request<unknown, unknown, NewProduct>, res: Response, next: NextFunction) => {
+productRouter.post('', authenticateAdmin, parseNewProduct, async (req: Request<unknown, unknown, NewProduct>, res: Response, next: NextFunction) => {
   const { name, categories, price, description} = req.body
 
   try {

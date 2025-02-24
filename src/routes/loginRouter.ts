@@ -9,7 +9,7 @@ import config from '../utils/config'
 const loginRouter = express.Router()
 
 // Router for handing login requests
-loginRouter.post('/', parseLoginCredentials, async (req: Request<unknown, unknown, LoginCredentials>, res: Response, next: NextFunction) => {
+loginRouter.post('', parseLoginCredentials, async (req: Request<unknown, unknown, LoginCredentials>, res: Response, next: NextFunction) => {
   const { email, password } = req.body
   try {
     // Attempts to find the user and compares the provided password to the password hash
@@ -25,7 +25,7 @@ loginRouter.post('/', parseLoginCredentials, async (req: Request<unknown, unknow
         id: authenticatingUser._id.toString()
       }
       // Signs the token and sends as the body of the response with status 200
-      const token = jwt.sign(payload, config.SECRET, {expiresIn: '5s'})
+      const token = jwt.sign(payload, config.SECRET, {expiresIn: '2h'})
       res.status(200).json({
         email: authenticatingUser.email,
         name: authenticatingUser.name,

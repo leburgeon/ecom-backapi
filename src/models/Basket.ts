@@ -7,6 +7,7 @@ const basketSchema = new mongoose.Schema({
   },
   products: [
     {
+      _id: false,
       productId: {
         type: mongoose.Types.ObjectId,
         ref: 'Product',

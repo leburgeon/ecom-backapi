@@ -5,6 +5,7 @@ import { LoginCredentials, JwtUserPayload } from '../types'
 import User from '../models/User'
 import bcrypt from 'bcryptjs'
 import config from '../utils/config'
+import Basket from '../models/Basket'
 
 const loginRouter = express.Router()
 
@@ -24,12 +25,21 @@ loginRouter.post('', parseLoginCredentials, async (req: Request<unknown, unknown
         name: authenticatingUser.name,
         id: authenticatingUser._id.toString()
       }
+
+      // For collecting the metadata of the user to send with the token
+      const usersBasket = await Basket.findOne({user: authenticatingUser._id})
+
+      const metaData = {
+        basketCount: usersBasket ? usersBasket.products.length : 0
+      }
+
       // Signs the token and sends as the body of the response with status 200
       const token = jwt.sign(payload, config.SECRET, {expiresIn: '2h'})
       res.status(200).json({
         email: authenticatingUser.email,
         name: authenticatingUser.name,
-        token
+        token,
+        metaData
       })
     }
   } catch (error: unknown) {

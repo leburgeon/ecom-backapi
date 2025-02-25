@@ -1,19 +1,16 @@
 FRONTEND: 
-  - Out of stock items look different on product page
-  - Warning for low stock items, and message that stock will be reserved for x minutes
-  - Info notification in case adding to basket does not succeed, and change to the stock level of product in FE
-  - Add little counter for basket count
-  - Error message for token expired is not generic, find source
+  
+  
 
 BACKEND:
   - 
 
 TODOS:
 - Create MVP for basket, ie simple route that adds item to basket if there is stock available
-  - check why not increasing qty when same product
   - check why objects have own id istead of just plain object
   - Add adding to basket route
   - Add removing from basket route
+  -- THINK: IVE REMOVED THE ID FROM THE PRODUCTS IN THE ARRAY, BUT DO I ACTUALLY WANT THESE FOR BASKET MANIPUTAION?
   - Add route for deleting a product entirely from basket
 - Simple stock validation for checkout
   - Check that there is enough stock for items when user attempts to checkout
@@ -22,6 +19,8 @@ TODOS:
    - Decide: should frontend remove from basket? 
    - Should there be known 'out of stock' flag on items in basket in frontend?
 - Implement the soft reservation system
+  - Info notification in case adding to basket does not succeed, and change to the stock level of product in FE
+  - Warning for low stock items, and message that stock will be reserved for x minutes
   - Decide: How to manage stock reservations for multiple items?
   - Updated route for adding to basket, that creates reservations when ls
   - Background tasks for removing reservations
@@ -31,3 +30,4 @@ TODOS:
 Later
 - Add database sharding for category
 - Add an index for user of orders
+- Add an index for user id of baskets

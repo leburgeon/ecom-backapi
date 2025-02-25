@@ -36,7 +36,7 @@ basketRouter.post('/add', authenticateUser, parseProductToBasket, async (req: Au
       // Itterates over the array of products already in the basket
       let wasInBasket = false
       usersBasket.products.forEach(product => {
-        
+
         // If the product exists in the basket already, increases the quantity by requested amount
         if (product.productId.toString() === productToAdd._id.toString()){
           product.quantity += quantityToAdd
@@ -54,7 +54,7 @@ basketRouter.post('/add', authenticateUser, parseProductToBasket, async (req: Au
       // Saves the basket after changes
       await usersBasket.save()
 
-      const productsNowInBasket = usersBasket.products.reduce((acc, _curr) => {return acc + 1}, 0)
+      const productsNowInBasket = usersBasket.products.length
       console.log(productsNowInBasket)
 
       // Confirms the add to the frontend, with the amount of products now in the basket

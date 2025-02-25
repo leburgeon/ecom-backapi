@@ -21,24 +21,53 @@ const basketRouter = express_1.default.Router();
 basketRouter.post('/add', middlewear_1.authenticateUser, middlewear_1.parseProductToBasket, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const userDoc = req.user;
     const productToAddId = req.body.productId;
-    const productToAddQuantity = parseInt(req.body.quantity);
+    const quantityToAdd = parseInt(req.body.quantity);
     // First ensures that the objectId corresponds to a valid product
     const productToAdd = yield Product_1.default.findById(productToAddId);
     if (!productToAdd) {
         const errorMessage = `Error finding the product with the id ${productToAddId}`;
         console.log(errorMessage);
         res.status(404).json({ error: errorMessage });
-        next();
     }
-    // Attempts to find the basket associated with the user
-    let usersBasket = yield Basket_1.default.findOne({ user: userDoc === null || userDoc === void 0 ? void 0 : userDoc._id });
-    // If no basket is found, a basket is created for that user with the item to add
-    if (!usersBasket) {
+    else {
         try {
-            userBasket = new Basket_1.default({ user: userDoc === null || userDoc === void 0 ? void 0 : userDoc._id });
+            // Attempts to find the basket associated with the user
+            let usersBasket = yield Basket_1.default.findOne({ user: userDoc === null || userDoc === void 0 ? void 0 : userDoc._id });
+            // If no basket is found, a basket is created for that user with the item to add
+            if (!usersBasket) {
+                usersBasket = new Basket_1.default({ user: userDoc === null || userDoc === void 0 ? void 0 : userDoc._id });
+                yield usersBasket.save();
+            }
+            // Itterates over the array of products already in the basket
+            let wasInBasket = false;
+            usersBasket.products.forEach(product => {
+                // If the product exists in the basket already, increases the quantity by requested amount
+                if (product.productId.toString() === productToAdd._id.toString()) {
+                    product.quantity += quantityToAdd;
+                    wasInBasket = true;
+                }
+            });
+            // If the product was not in the basket, adds a new product object to the array of products
+            if (!wasInBasket) {
+                usersBasket.products.push({
+                    productId: productToAdd._id,
+                    quantity: quantityToAdd
+                });
+            }
+            // Saves the basket after changes
+            yield usersBasket.save();
+            const productsNowInBasket = usersBasket.products.reduce((acc, _curr) => { return acc + 1; }, 0);
+            console.log(productsNowInBasket);
+            // Confirms the add to the frontend, with the amount of products now in the basket
+            res.status(200).json({ basketCount: productsNowInBasket });
         }
-        finally {
+        catch (error) {
+            console.error('Error adding product to basket', error);
+            next(error);
         }
     }
+}));
+basketRouter.post('/reduce', middlewear_1.authenticateUser, middlewear_1.parseProductToBasket, (_req, _res, _next) => __awaiter(void 0, void 0, void 0, function* () {
+    // TODO
 }));
 exports.default = basketRouter;

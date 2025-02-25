@@ -58,6 +58,9 @@ const zod_2 = require("zod");
 const authenticateUser = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     // Extracts the authorisation header from the request
     const authorisation = req.get('Authorization');
+    console.log('#################################');
+    console.log();
+    console.log(authorisation);
     // Checks that the token uses the bearer scheme and if not sends the request
     if (!authorisation || !authorisation.startsWith('Bearer ')) {
         res.status(401).json({ error: 'Please provide authentication token with bearer scheme' });

@@ -15,6 +15,9 @@ export const authenticateUser = async (req: AuthenticatedRequest, res: Response,
 
   // Extracts the authorisation header from the request
   const authorisation = req.get('Authorization')
+  console.log('#################################')
+  console.log()
+  console.log(authorisation)
 
   // Checks that the token uses the bearer scheme and if not sends the request
   if (!authorisation || !authorisation.startsWith('Bearer ')){

@@ -21,7 +21,6 @@ basketRouter.post('/add', authenticateUser, parseProductToBasket, async (req: Au
     const errorMessage = `Error finding the product with the id ${productToAddId}`
     console.log(errorMessage)
     res.status(404).json({error: errorMessage})
-    next()
 
   } else {
     try {
@@ -37,8 +36,9 @@ basketRouter.post('/add', authenticateUser, parseProductToBasket, async (req: Au
       // Itterates over the array of products already in the basket
       let wasInBasket = false
       usersBasket.products.forEach(product => {
+        
         // If the product exists in the basket already, increases the quantity by requested amount
-        if (product.productId === productToAdd._id){
+        if (product.productId.toString() === productToAdd._id.toString()){
           product.quantity += quantityToAdd
           wasInBasket = true
         }
@@ -54,6 +54,11 @@ basketRouter.post('/add', authenticateUser, parseProductToBasket, async (req: Au
       // Saves the basket after changes
       await usersBasket.save()
 
+      const productsNowInBasket = usersBasket.products.reduce((acc, _curr) => {return acc + 1}, 0)
+      console.log(productsNowInBasket)
+
+      // Confirms the add to the frontend, with the amount of products now in the basket
+      res.status(200).json({basketCount: productsNowInBasket})
     } catch (error) {
       console.error('Error adding product to basket', error)
       next(error)
@@ -61,7 +66,7 @@ basketRouter.post('/add', authenticateUser, parseProductToBasket, async (req: Au
   }  
 })
 
-basketRouter.post('/reduce', authenticateUser, parseProductToBasket, async (req: AuthenticatedRequest, res: Response, next: NextFunction) =>{
+basketRouter.post('/reduce', authenticateUser, parseProductToBasket, async (_req: AuthenticatedRequest, _res: Response, _next: NextFunction) =>{
   // TODO
 })
 

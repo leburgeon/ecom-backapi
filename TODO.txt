@@ -2,14 +2,19 @@ FRONTEND:
   - Out of stock items look different on product page
   - Warning for low stock items, and message that stock will be reserved for x minutes
   - Info notification in case adding to basket does not succeed, and change to the stock level of product in FE
+  - Add little counter for basket count
+  - Error message for token expired is not generic, find source
 
 BACKEND:
   - 
 
 TODOS:
 - Create MVP for basket, ie simple route that adds item to basket if there is stock available
+  - check why not increasing qty when same product
+  - check why objects have own id istead of just plain object
   - Add adding to basket route
-  - Add incrementing or decrementing basket quantity route
+  - Add removing from basket route
+  - Add route for deleting a product entirely from basket
 - Simple stock validation for checkout
   - Check that there is enough stock for items when user attempts to checkout
   - Checkout consists of just a get call to checkout route, where confirmation info is returned before proceeding

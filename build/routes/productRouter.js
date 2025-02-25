@@ -19,7 +19,7 @@ const Description_1 = __importDefault(require("../models/Description"));
 const productRouter = express_1.default.Router();
 // TODO add filtering based on category or price range
 // Route for retrieving the products 
-productRouter.get('/', middlewear_1.parsePagination, middlewear_1.parseFilters, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+productRouter.get('', middlewear_1.parsePagination, middlewear_1.parseFilters, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const filters = req.filters;
     // Parses the query strings to integers
     const page = parseInt(req.query.page) || 1;
@@ -34,7 +34,7 @@ productRouter.get('/', middlewear_1.parsePagination, middlewear_1.parseFilters, 
         next(error);
     }
 }));
-productRouter.get('/pageof/', middlewear_1.parsePagination, middlewear_1.parseFilters, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+productRouter.get('/pageof', middlewear_1.parsePagination, middlewear_1.parseFilters, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const filters = req.filters;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -52,6 +52,7 @@ productRouter.get('/:id', (req, res, next) => __awaiter(void 0, void 0, void 0, 
     const { id } = req.params;
     try {
         const productToReturn = yield Product_1.default.findById(id);
+        console.log('Product after population: ', productToReturn);
         if (!productToReturn) {
             res.status(404).json('Product not found');
         }
@@ -78,7 +79,7 @@ productRouter.delete('/:id', middlewear_1.authenticateAdmin, (req, res, next) =>
     }
 }));
 // Route for adding a new product document
-productRouter.post('/', middlewear_1.authenticateAdmin, middlewear_1.parseNewProduct, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+productRouter.post('', middlewear_1.authenticateAdmin, middlewear_1.parseNewProduct, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const { name, categories, price, description } = req.body;
     try {
         // First creates the new product document

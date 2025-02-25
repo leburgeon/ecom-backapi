@@ -45,7 +45,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.errorHandler = exports.parseFilters = exports.parseNewOrder = exports.parsePagination = exports.parseLoginCredentials = exports.parseNewProduct = exports.parseNewUser = exports.authenticateAdmin = exports.authenticateUser = void 0;
+exports.errorHandler = exports.requestLogger = exports.parseProductToBasket = exports.parseFilters = exports.parseNewOrder = exports.parsePagination = exports.parseLoginCredentials = exports.parseNewProduct = exports.parseNewUser = exports.authenticateAdmin = exports.authenticateUser = void 0;
 const validators_1 = require("./validators");
 const mongoose_1 = __importDefault(require("mongoose"));
 const zod_1 = require("zod");
@@ -169,6 +169,7 @@ const parseNewOrder = (req, _res, next) => {
     }
 };
 exports.parseNewOrder = parseNewOrder;
+// Middlewear for parsing the filter information for a search request
 const parseFilters = (req, _res, next) => {
     const { category, minPrice, maxPrice, inStockOnly, query } = req.query;
     console.log("Query: ", req.query);
@@ -197,12 +198,28 @@ const parseFilters = (req, _res, next) => {
     }
     // For adding a filter to only return instock items
     if (inStockOnly && inStockOnly === 'true') {
-        filters['stock.quantity'] = { $gte: 1 };
+        filters['stock'] = { $gte: 1 };
     }
     req.filters = filters;
     next();
 };
 exports.parseFilters = parseFilters;
+// Middlewear for parsing the required info for adding an item to the basket
+const parseProductToBasket = (req, _res, next) => {
+    if (!mongoose_1.default.isValidObjectId(req.body.productId) || isNaN(parseInt(req.body.quantity))) {
+        next(new Error('Must include valid productId and quantity for adding or removing from basket'));
+    }
+    next();
+};
+exports.parseProductToBasket = parseProductToBasket;
+const requestLogger = (req, _res, next) => {
+    const method = req.method;
+    const url = req.originalUrl;
+    const body = req.body;
+    console.log(`Method: ${method} Url: ${url} Body: ${body}`);
+    next();
+};
+exports.requestLogger = requestLogger;
 // Error handler for the application
 const errorHandler = (error, _req, res, _next) => {
     if (error instanceof mongoose_1.default.Error.ValidationError) { // For handling a mongoose validation error
@@ -223,9 +240,17 @@ const errorHandler = (error, _req, res, _next) => {
     else if (error instanceof jsonwebtoken_1.TokenExpiredError) {
         res.status(400).json({ error: 'Token expired, please re-login' });
     }
+    else if (error instanceof Error && error.message === 'Must include valid productId and quantity for adding or removing from basket') {
+        res.status(401).json({ error: error.message });
+    }
     else {
+        console.log('unhandled error case');
         console.error(error);
-        res.status(500).json({ error: 'Internal Server Error' });
+        let errorMessage = 'Internal server error and unhandled error case: ';
+        if (error instanceof Error) {
+            errorMessage += error.message;
+        }
+        res.status(500).json({ error: errorMessage });
     }
 };
 exports.errorHandler = errorHandler;

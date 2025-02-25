@@ -120,6 +120,7 @@ export const parseNewOrder = (req: Request, _res: Response, next: NextFunction) 
   }
 }
 
+// Middlewear for parsing the filter information for a search request
 export const parseFilters = (req: RequestWithSearchFilters, _res: Response, next: NextFunction) => {
   const { category, minPrice, maxPrice, inStockOnly, query } = req.query
   console.log("Query: ",req.query)
@@ -160,6 +161,14 @@ export const parseFilters = (req: RequestWithSearchFilters, _res: Response, next
   next()
 }
 
+// Middlewear for parsing the required info for adding an item to the basket
+export const parseProductToBasket = (req: Request, _res: Response, next: NextFunction) => {
+  if (!mongoose.isValidObjectId(req.body.productId) || isNaN(parseInt(req.body.quantity))){
+    next(new Error('Must include valid productId and quantity for adding or removing from basket'))
+  }
+  next()
+}
+
 export const requestLogger = (req: Request, _res: Response, next: NextFunction) => {
   const method = req.method
   const url = req.originalUrl
@@ -182,8 +191,15 @@ export const errorHandler = (error: unknown, _req: Request, res: Response, _next
     res.status(401).json({error: `${error.name}:${error.message}`})
   } else if (error instanceof TokenExpiredError){
     res.status(400).json({error: 'Token expired, please re-login'})
+  } else if (error instanceof Error && error.message === 'Must include valid productId and quantity for adding or removing from basket') {
+    res.status(401).json({error: error.message})
   } else {
+    console.log('unhandled error case')
     console.error(error)
-    res.status(500).json({error: 'Internal Server Error'})
+    let errorMessage = 'Internal server error and unhandled error case: '
+    if (error instanceof Error){
+      errorMessage += error.message
+    }
+    res.status(500).json({error: errorMessage})
   }
 }

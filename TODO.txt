@@ -1,16 +1,23 @@
 FRONTEND: 
   - Out of stock items look different on product page
   - Warning for low stock items, and message that stock will be reserved for x minutes
+  - Info notification in case adding to basket does not succeed, and change to the stock level of product in FE
 
 BACKEND:
   - 
 
 TODOS:
 - Create MVP for basket, ie simple route that adds item to basket if there is stock available
-  - Change the product Model to remove resrved and have single quantity
-  - Create the Basket model for the user
+  - Add adding to basket route
+  - Add incrementing or decrementing basket quantity route
 - Simple stock validation for checkout
+  - Check that there is enough stock for items when user attempts to checkout
+  - Checkout consists of just a get call to checkout route, where confirmation info is returned before proceeding
+  - If there is not enough stock, return error to frontend
+   - Decide: should frontend remove from basket? 
+   - Should there be known 'out of stock' flag on items in basket in frontend?
 - Implement the soft reservation system
+  - Decide: How to manage stock reservations for multiple items?
   - Updated route for adding to basket, that creates reservations when ls
   - Background tasks for removing reservations
   - Web sockets for notifying users that an item in their basket is out of stock

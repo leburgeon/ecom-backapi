@@ -20,7 +20,7 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const config_1 = __importDefault(require("../utils/config"));
 const loginRouter = express_1.default.Router();
 // Router for handing login requests
-loginRouter.post('/', middlewear_1.parseLoginCredentials, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+loginRouter.post('', middlewear_1.parseLoginCredentials, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const { email, password } = req.body;
     try {
         // Attempts to find the user and compares the provided password to the password hash
@@ -37,7 +37,7 @@ loginRouter.post('/', middlewear_1.parseLoginCredentials, (req, res, next) => __
                 id: authenticatingUser._id.toString()
             };
             // Signs the token and sends as the body of the response with status 200
-            const token = jsonwebtoken_1.default.sign(payload, config_1.default.SECRET, { expiresIn: 3600 * 4 });
+            const token = jsonwebtoken_1.default.sign(payload, config_1.default.SECRET, { expiresIn: '2h' });
             res.status(200).json({
                 email: authenticatingUser.email,
                 name: authenticatingUser.name,

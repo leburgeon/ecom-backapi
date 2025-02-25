@@ -13,9 +13,7 @@ const cors_1 = __importDefault(require("cors"));
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
-app.get('/ping', (_req, res) => {
-    res.send('pong');
-});
+app.use(middlewear_1.requestLogger);
 app.use('/api/users', userRouter_1.default);
 app.use('/api/login', loginRouter_1.default);
 app.use('/api/products', productRouter_1.default);

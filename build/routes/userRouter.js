@@ -18,7 +18,7 @@ const middlewear_1 = require("../utils/middlewear");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const userRouter = express_1.default.Router();
 // Route for returning a list of the users in the database
-userRouter.get('/', middlewear_1.authenticateAdmin, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+userRouter.get('', middlewear_1.authenticateAdmin, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('Authenticated user: ', req.user);
     try {
         const allUsers = yield User_1.default.find({});
@@ -30,7 +30,7 @@ userRouter.get('/', middlewear_1.authenticateAdmin, (req, res, next) => __awaite
 }));
 // TODO Route for getting the data for a single user, returns the user and populated order data
 // Route for adding a new user
-userRouter.post('/', middlewear_1.parseNewUser, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+userRouter.post('', middlewear_1.parseNewUser, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const { name, email, password } = req.body;
     const passwordHash = yield bcryptjs_1.default.hash(password, 10);
     try {

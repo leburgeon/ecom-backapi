@@ -20,6 +20,10 @@ const Order_1 = __importDefault(require("../models/Order"));
 // import paypalClient from '../utils/paypalClient'
 // Baseurl is /api/orders
 const orderRouter = express_1.default.Router();
+// Route for retrieving a list of the users orders
+orderRouter.get('/', middlewear_1.authenticateUser, (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    res.status(200).json(['order1, order2']);
+}));
 // Route for creating a new order and reducing the stock count, 
 orderRouter.post('/', middlewear_1.authenticateUser, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { products } = req.body;
@@ -43,13 +47,13 @@ orderRouter.post('/', middlewear_1.authenticateUser, (req, res) => __awaiter(voi
                 throw new Error('Product not found!');
             }
             // Asserts that there is sufficient quantity in the reserved stock and throws error if not
-            if (product.quantity > doc.stock.reserved) {
+            if (product.quantity > doc.stock) {
                 throw new Error(`Insufficient stock for ${doc.name} x ${product.quantity}`);
             }
             // Updates the cost total 
             totalCost += (doc.price * product.quantity);
             // Decrements the stock reserve and returns the document (not saved)
-            doc.stock.reserved -= product.quantity;
+            doc.stock -= product.quantity;
             // Then attempts to save the doc
             yield doc.save();
             return Object.assign(Object.assign({}, product), { doc });

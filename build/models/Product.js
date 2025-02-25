@@ -18,17 +18,8 @@ const productSchema = new mongoose_1.default.Schema({
         required: true
     },
     stock: {
-        type: {
-            quantity: {
-                type: Number,
-                required: true
-            },
-            reserved: {
-                type: Number,
-                required: true
-            }
-        },
-        required: true
+        type: Number,
+        default: 0
     },
     description: {
         type: mongoose_1.default.Schema.Types.ObjectId,

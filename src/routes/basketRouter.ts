@@ -55,7 +55,6 @@ basketRouter.post('/add', authenticateUser, parseProductToBasket, async (req: Au
       await usersBasket.save()
 
       const productsNowInBasket = usersBasket.products.length
-      console.log(productsNowInBasket)
 
       // Confirms the add to the frontend, with the amount of products now in the basket
       res.status(200).json({basketCount: productsNowInBasket})
@@ -66,8 +65,51 @@ basketRouter.post('/add', authenticateUser, parseProductToBasket, async (req: Au
   }  
 })
 
-basketRouter.post('/reduce', authenticateUser, parseProductToBasket, async (_req: AuthenticatedRequest, _res: Response, _next: NextFunction) =>{
-  // TODO
+basketRouter.post('/reduce', authenticateUser, parseProductToBasket, async (req: AuthenticatedRequest, res: Response, _next: NextFunction) =>{
+  const userDoc = req.user
+  const productToReduceId = req.body.productId
+  const quantityToRemove = parseInt(req.body.quantity)
+
+  try {
+    // First attempts to find the product
+    const productToReduce = await Product.findById(productToReduceId)
+    if (!productToReduce){
+      // If not found, respond with 404 not found
+      res.status(404).json({error: 'Product to reduce from basket not found'})
+    } else {
+      // Attempts to find the user basket
+      const userBasket = await Basket.findOne({user: userDoc?._id})
+
+      // If no basket exists, no need to remove item
+      if (!userBasket){
+        res.status(200)
+      } else {
+        
+        // Uses a mongoDB query to update the product array 
+        // Breakdown: the first object argument is the query selector, which is used to:
+          // 1: Select the document 
+          // 2: specify a condition on array elements which is utilised by the $ operator
+        await Basket.updateOne({_id: userBasket._id, 'products.productId': productToReduce._id},
+          // The second object argument is the update operation
+          // In this example, the $inc update operator is used alongside the $ operator to affect only the first matching element
+          // The '.' operator is subsequantly used to identify which field of the object to affect
+          {
+            $inc: {'products.$.quantity': - quantityToRemove},
+            // The second field of this update operation is used to remove elements in the products array, whos condition is met
+            $pull: { products: {quantity: {$lte: 1}}}
+          }
+        )
+        const usersBasketAfter = await Basket.findById(userBasket._id)
+        res.status(200).json({basketCount: usersBasketAfter?.products.length})
+      }
+    }
+  } catch (error) {
+    console.error('SOMTHING WRONG REDUCING FROM BASKET', error)
+    res.status(500).json({
+      error: 'There was an error removing this from the basket'
+    })
+  }
+  
 })
 
 export default basketRouter

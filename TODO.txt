@@ -7,9 +7,10 @@ BACKEND:
 
 TODOS:
 - Create MVP for basket, ie simple route that adds item to basket if there is stock available
-  - check why objects have own id istead of just plain object
-  - Add adding to basket route
   - Add removing from basket route
+  - Create route for retrieving populated basket information - include current stock levels for limits to increase/decrease
+  - Create basket page to display basket items
+  - Create increment/decrement stock button 
   -- THINK: IVE REMOVED THE ID FROM THE PRODUCTS IN THE ARRAY, BUT DO I ACTUALLY WANT THESE FOR BASKET MANIPUTAION?
   - Add route for deleting a product entirely from basket
 - Simple stock validation for checkout

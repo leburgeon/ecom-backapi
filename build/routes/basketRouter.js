@@ -88,15 +88,20 @@ basketRouter.post('/reduce', middlewear_1.authenticateUser, middlewear_1.parsePr
                 // Breakdown: the first object argument is the query selector, which is used to:
                 // 1: Select the document 
                 // 2: specify a condition on array elements which is utilised by the $ operator
-                yield Basket_1.default.updateOne({ _id: userBasket._id, 'products.productId': productToReduce._id }, 
-                // The second object argument is the update operation
-                // In this example, the $inc update operator is used alongside the $ operator to affect only the first matching element
-                // The '.' operator is subsequantly used to identify which field of the object to affect
-                {
-                    $inc: { 'products.$.quantity': -quantityToRemove },
-                    // The second field of this update operation is used to remove elements in the products array, whos condition is met
-                    $pull: { products: { quantity: { $lte: 1 } } }
-                });
+                // await Basket.updateOne({_id: userBasket._id, 'products.productId': productToReduce._id},
+                //   // The second object argument is the update operation
+                //   // In this example, the $inc update operator is used alongside the $ operator to affect only the first matching element
+                //   // The '.' operator is subsequantly used to identify which field of the object to affect
+                //   {
+                //     $inc: {'products.$.quantity': - quantityToRemove},
+                //     // The second field of this update operation is used to remove elements in the products array, whos condition is met
+                //     $pull: { products: {quantity: {$lte: 1}}}
+                //   }
+                // )
+                // UPDATE:: Performing operations that could cause a conflict throws a mongo server error
+                // Seperated operations
+                yield Basket_1.default.updateOne({ _id: userBasket._id, 'products.productId': productToReduce._id }, { $inc: { 'products.$.quantity': -quantityToRemove } });
+                yield Basket_1.default.updateOne({ _id: userBasket._id }, { $pull: { products: { quantity: { $lte: 1 } } } });
                 const usersBasketAfter = yield Basket_1.default.findById(userBasket._id);
                 res.status(200).json({ basketCount: usersBasketAfter === null || usersBasketAfter === void 0 ? void 0 : usersBasketAfter.products.length });
             }

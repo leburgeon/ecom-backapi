@@ -7,8 +7,6 @@ BACKEND:
 
 TODOS:
 - Create MVP for basket, ie simple route that adds item to basket if there is stock available
-  - Add removing from basket route
-  - Test removing route
   - Create route for retrieving populated basket information - include current stock levels for limits to increase/decrease
   - Create basket page to display basket items
   - Create increment/decrement stock button 

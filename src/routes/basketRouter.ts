@@ -88,16 +88,27 @@ basketRouter.post('/reduce', authenticateUser, parseProductToBasket, async (req:
         // Breakdown: the first object argument is the query selector, which is used to:
           // 1: Select the document 
           // 2: specify a condition on array elements which is utilised by the $ operator
+        // await Basket.updateOne({_id: userBasket._id, 'products.productId': productToReduce._id},
+        //   // The second object argument is the update operation
+        //   // In this example, the $inc update operator is used alongside the $ operator to affect only the first matching element
+        //   // The '.' operator is subsequantly used to identify which field of the object to affect
+        //   {
+        //     $inc: {'products.$.quantity': - quantityToRemove},
+        //     // The second field of this update operation is used to remove elements in the products array, whos condition is met
+        //     $pull: { products: {quantity: {$lte: 1}}}
+        //   }
+        // )
+        // UPDATE:: Performing operations that could cause a conflict throws a mongo server error
+        // Seperated operations
+        // Decrements by the specified amount
         await Basket.updateOne({_id: userBasket._id, 'products.productId': productToReduce._id},
-          // The second object argument is the update operation
-          // In this example, the $inc update operator is used alongside the $ operator to affect only the first matching element
-          // The '.' operator is subsequantly used to identify which field of the object to affect
-          {
-            $inc: {'products.$.quantity': - quantityToRemove},
-            // The second field of this update operation is used to remove elements in the products array, whos condition is met
-            $pull: { products: {quantity: {$lte: 1}}}
-          }
+          {$inc: {'products.$.quantity': -quantityToRemove}}
         )
+        // Deletes all products in the basket with a quantity less than 1
+        await Basket.updateOne({_id: userBasket._id},
+          {$pull: {products: {quantity: {$lte: 0}}}}
+        )
+
         const usersBasketAfter = await Basket.findById(userBasket._id)
         res.status(200).json({basketCount: usersBasketAfter?.products.length})
       }
@@ -109,6 +120,27 @@ basketRouter.post('/reduce', authenticateUser, parseProductToBasket, async (req:
     })
   }
   
+})
+
+// Route for removing an item from the basket entirely
+basketRouter.delete('/:id', authenticateUser, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try{
+    const productToRemove = await Product.findById(req.params.id)
+
+    if (productToRemove){
+      // Perform an update operation on the products array, for the basket document with the matching user id
+      await Basket.updateOne({user: req.user?._id},{$pull: {products: {productId: productToRemove._id}}})
+    }
+
+    // Calculates the number of unique items in the basket
+    const userBasket = await Basket.findOne({user: req.user?._id})
+    const basketCount = userBasket?.products.length
+    
+    res.status(200).json({basketCount})
+  } catch (error){
+    console.error('Error removing from basket entirely', error)
+    next(error)
+  }
 })
 
 export default basketRouter

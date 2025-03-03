@@ -15,9 +15,6 @@ export const authenticateUser = async (req: AuthenticatedRequest, res: Response,
 
   // Extracts the authorisation header from the request
   const authorisation = req.get('Authorization')
-  console.log('#################################')
-  console.log()
-  console.log(authorisation)
 
   // Checks that the token uses the bearer scheme and if not sends the request
   if (!authorisation || !authorisation.startsWith('Bearer ')){
@@ -126,7 +123,6 @@ export const parseNewOrder = (req: Request, _res: Response, next: NextFunction) 
 // Middlewear for parsing the filter information for a search request
 export const parseFilters = (req: RequestWithSearchFilters, _res: Response, next: NextFunction) => {
   const { category, minPrice, maxPrice, inStockOnly, query } = req.query
-  console.log("Query: ",req.query)
   const filters: any = {}
 
   // For adding a filter for the search query

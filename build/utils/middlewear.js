@@ -58,9 +58,6 @@ const zod_2 = require("zod");
 const authenticateUser = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     // Extracts the authorisation header from the request
     const authorisation = req.get('Authorization');
-    console.log('#################################');
-    console.log();
-    console.log(authorisation);
     // Checks that the token uses the bearer scheme and if not sends the request
     if (!authorisation || !authorisation.startsWith('Bearer ')) {
         res.status(401).json({ error: 'Please provide authentication token with bearer scheme' });
@@ -175,7 +172,6 @@ exports.parseNewOrder = parseNewOrder;
 // Middlewear for parsing the filter information for a search request
 const parseFilters = (req, _res, next) => {
     const { category, minPrice, maxPrice, inStockOnly, query } = req.query;
-    console.log("Query: ", req.query);
     const filters = {};
     // For adding a filter for the search query
     if (query && zod_2.z.string().safeParse(query)) {

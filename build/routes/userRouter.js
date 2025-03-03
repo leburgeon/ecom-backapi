@@ -18,8 +18,7 @@ const middlewear_1 = require("../utils/middlewear");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const userRouter = express_1.default.Router();
 // Route for returning a list of the users in the database
-userRouter.get('', middlewear_1.authenticateAdmin, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log('Authenticated user: ', req.user);
+userRouter.get('', middlewear_1.authenticateAdmin, (_req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const allUsers = yield User_1.default.find({});
         res.status(200).json(allUsers);

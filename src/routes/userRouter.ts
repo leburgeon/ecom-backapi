@@ -7,8 +7,7 @@ import bcrypt from 'bcryptjs'
 const userRouter = express.Router()
 
 // Route for returning a list of the users in the database
-userRouter.get('', authenticateAdmin, async (req: AuthenticatedRequest, res: Response, next) => {
-  console.log('Authenticated user: ', req.user)
+userRouter.get('', authenticateAdmin, async (_req: AuthenticatedRequest, res: Response, next) => {
   try {
     const allUsers = await User.find({})
     res.status(200).json(allUsers)

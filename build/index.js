@@ -27,7 +27,7 @@ const startServer = () => __awaiter(void 0, void 0, void 0, function* () {
         if (error instanceof Error) {
             errorMessage += error.message;
         }
-        console.log(errorMessage);
+        console.error(error);
     }
     app_1.default.listen(port, () => {
         console.log('App listening on port ' + port);

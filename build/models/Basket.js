@@ -11,6 +11,7 @@ const basketSchema = new mongoose_1.default.Schema({
     },
     products: [
         {
+            _id: false,
             productId: {
                 type: mongoose_1.default.Types.ObjectId,
                 ref: 'Product',
@@ -18,8 +19,7 @@ const basketSchema = new mongoose_1.default.Schema({
             },
             quantity: {
                 type: Number,
-                default: 1,
-                min: 1
+                default: 1
             }
         }
     ]

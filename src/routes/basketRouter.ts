@@ -19,7 +19,6 @@ basketRouter.post('/add', authenticateUser, parseProductToBasket, async (req: Au
   if (!productToAdd){
     
     const errorMessage = `Error finding the product with the id ${productToAddId}`
-    console.log(errorMessage)
     res.status(404).json({error: errorMessage})
 
   } else {
@@ -65,7 +64,7 @@ basketRouter.post('/add', authenticateUser, parseProductToBasket, async (req: Au
   }  
 })
 
-basketRouter.post('/reduce', authenticateUser, parseProductToBasket, async (req: AuthenticatedRequest, res: Response, _next: NextFunction) =>{
+basketRouter.post('/reduce', authenticateUser, parseProductToBasket, async (req: AuthenticatedRequest, res: Response, _next: NextFunction) => {
   const userDoc = req.user
   const productToReduceId = req.body.productId
   const quantityToRemove = parseInt(req.body.quantity)

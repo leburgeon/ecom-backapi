@@ -52,7 +52,6 @@ productRouter.get('/:id', (req, res, next) => __awaiter(void 0, void 0, void 0, 
     const { id } = req.params;
     try {
         const productToReturn = yield Product_1.default.findById(id);
-        console.log('Product after population: ', productToReturn);
         if (!productToReturn) {
             res.status(404).json('Product not found');
         }

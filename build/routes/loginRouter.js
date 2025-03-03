@@ -18,6 +18,7 @@ const middlewear_1 = require("../utils/middlewear");
 const User_1 = __importDefault(require("../models/User"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const config_1 = __importDefault(require("../utils/config"));
+const Basket_1 = __importDefault(require("../models/Basket"));
 const loginRouter = express_1.default.Router();
 // Router for handing login requests
 loginRouter.post('', middlewear_1.parseLoginCredentials, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
@@ -36,12 +37,18 @@ loginRouter.post('', middlewear_1.parseLoginCredentials, (req, res, next) => __a
                 name: authenticatingUser.name,
                 id: authenticatingUser._id.toString()
             };
+            // For collecting the metadata of the user to send with the token
+            const usersBasket = yield Basket_1.default.findOne({ user: authenticatingUser._id });
+            const metaData = {
+                basketCount: usersBasket ? usersBasket.products.length : 0
+            };
             // Signs the token and sends as the body of the response with status 200
             const token = jsonwebtoken_1.default.sign(payload, config_1.default.SECRET, { expiresIn: '2h' });
             res.status(200).json({
                 email: authenticatingUser.email,
                 name: authenticatingUser.name,
-                token
+                token,
+                metaData
             });
         }
     }

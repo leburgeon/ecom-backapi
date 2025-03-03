@@ -14,7 +14,7 @@ const startServer = async () => {
     if (error instanceof Error){
       errorMessage += error.message
     }
-    console.log(errorMessage)
+    console.error(error)
   }
   
   app.listen(port, () => {

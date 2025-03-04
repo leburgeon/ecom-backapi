@@ -7,7 +7,22 @@ import Product from '../models/Product'
 
 const basketRouter = express.Router()
 
-// Route for getting the basket information of the user
+// Route for getting the populated basket information of the user
+basketRouter.get('', authenticateUser, async (req: AuthenticatedRequest, res: Response, next: NextFunction)=> {
+  try {
+    const userBasket = await Basket.findOne({user: req.user?._id}).populate('products.productId', 'name price stock firstImage')
+    const productsArray = userBasket?.products.map(product => {
+      return {
+        product: product.productId,
+        quantity: product.quantity
+      }
+    })
+    res.status(200).json({basket: productsArray})
+  } catch (error){
+    console.error('Error fetching user basket', error)
+    next(error)
+  }
+})
 
 basketRouter.post('/add', authenticateUser, parseProductToBasket, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   const userDoc = req.user
@@ -135,7 +150,7 @@ basketRouter.delete('/:id', authenticateUser, async (req: AuthenticatedRequest, 
     // Calculates the number of unique items in the basket
     const userBasket = await Basket.findOne({user: req.user?._id})
     const basketCount = userBasket?.products.length
-    
+
     res.status(200).json({basketCount})
   } catch (error){
     console.error('Error removing from basket entirely', error)

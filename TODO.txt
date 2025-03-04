@@ -1,5 +1,5 @@
 FRONTEND: 
-  
+  - Create logout mechanism for token expired events on all pages
   
 
 BACKEND:
@@ -7,11 +7,8 @@ BACKEND:
 
 TODOS:
 - Create MVP for basket, ie simple route that adds item to basket if there is stock available
-  - Create route for retrieving populated basket information - include current stock levels for limits to increase/decrease
-  - Create basket page to display basket items
-  - Create increment/decrement stock button 
+
   -- THINK: IVE REMOVED THE ID FROM THE PRODUCTS IN THE ARRAY, BUT DO I ACTUALLY WANT THESE FOR BASKET MANIPUTAION?
-  - Add route for deleting a product entirely from basket
 - Simple stock validation for checkout
   - Check that there is enough stock for items when user attempts to checkout
   - Checkout consists of just a get call to checkout route, where confirmation info is returned before proceeding

@@ -31,4 +31,6 @@ if (!PAYPALCLIENTSECRET || typeof PAYPALCLIENTSECRET !== 'string'){
   throw new Error('Paypal client secret not set')
 }
 
-export default {PORT, MONGODB_URL, SECRET, PAYPALCLIENTID, PAYPALCLIENTSECRET}
+const PAYPALURLENDPOINT = process.env.ENVIRONMENT === 'sandbox' ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com'
+
+export default {PORT, MONGODB_URL, SECRET, PAYPALCLIENTID, PAYPALCLIENTSECRET, PAYPALURLENDPOINT}

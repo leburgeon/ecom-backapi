@@ -1,14 +1,12 @@
 FRONTEND: 
-  - Create logout mechanism for token expired events on all pages
+- Add checkout button
+- Create payment page for post stock-validation and 
   
 
 BACKEND:
   - 
 
 TODOS:
-- Create MVP for basket, ie simple route that adds item to basket if there is stock available
-
-  -- THINK: IVE REMOVED THE ID FROM THE PRODUCTS IN THE ARRAY, BUT DO I ACTUALLY WANT THESE FOR BASKET MANIPUTAION?
 - Simple stock validation for checkout
   - Check that there is enough stock for items when user attempts to checkout
   - Checkout consists of just a get call to checkout route, where confirmation info is returned before proceeding

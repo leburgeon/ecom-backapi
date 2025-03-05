@@ -11,7 +11,7 @@ const orderRouter = express.Router()
 
 // Route for retrieving a list of the users orders
 orderRouter.get('/', authenticateUser, async (_req: AuthenticatedRequest, res: Response) => {
-  res.status(200).json(['order1, order2'])
+  res.status(200).json(['order1', 'order2'])
 })
 
 // Route for creating a new order and reducing the stock count, 

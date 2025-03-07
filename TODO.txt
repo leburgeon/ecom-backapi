@@ -1,12 +1,17 @@
 FRONTEND: 
-- Add checkout button
-- Create payment page for post stock-validation and 
+- Paypal integration: 
+  - TODO: Create a successful payment page with order refresh
+  - Create a payment failed operation, or return to basket with payment failed message
+  - Integrate checkout option to call the checkout route and then take the user to the checkout page
   
 
 BACKEND:
-  - 
+  - Write the checkout route to validate the stock levels and return formatted cart
+  - Write route for creating an order
+  - Write route for capturing the order
 
 TODOS:
+
 - Simple stock validation for checkout
   - Check that there is enough stock for items when user attempts to checkout
   - Checkout consists of just a get call to checkout route, where confirmation info is returned before proceeding
@@ -26,3 +31,5 @@ Later
 - Add database sharding for category
 - Add an index for user of orders
 - Add an index for user id of baskets
+- Implememt refresh tokens so that frontend requests a fresh access token if expired.
+   - somehow do this without user knowledge

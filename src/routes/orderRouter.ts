@@ -1,13 +1,51 @@
-import express, { Response } from 'express'
-import { authenticateUser } from '../utils/middlewear'
-import { AuthenticatedRequest, NewOrder } from '../types'
+import express, { NextFunction, Response } from 'express'
+import { validateBasketStock, authenticateUser, parseBasket } from '../utils/middlewear'
+import { AuthenticatedRequest, Basket, NewOrder,  } from '../types'
 import Product from '../models/Product'
 import mongoose from 'mongoose'
 import Order from '../models/Order'
+import { StockError } from '../utils/Errors'
 // import paypalClient from '../utils/paypalClient'
 
 // Baseurl is /api/orders
 const orderRouter = express.Router()
+
+// TODO:
+// Create a route for 1) checkout, which validates stock and returns a formatted basket to be displayed on the checkout page, aswell as returned with the createOrder route
+orderRouter.post('/checkout', parseBasket, validateBasketStock, async(req: AuthenticatedRequest<unknown, unknown, Basket>, res: Response, _next: NextFunction) => {
+  // Calculates the total for the products in the basket
+  const basket = req.body
+  try {
+    // Creates an array of objects with the product documents as an attribute
+    const populated = await Promise.all(basket.map(async item => {
+      const product = await Product.findById(item.id)
+      if (!product){
+        throw new StockError('Product not found', item.id)
+      }
+      return {product,
+        quantity: item.quantity
+      }
+    }))
+
+    let totalPrice = 0
+    populated.forEach(obj => {
+      totalPrice += obj.quantity * obj.product.price
+    })
+
+    res.status(200).json({basket, totalPrice})
+
+  } catch (error){
+    console.error(error)
+    res.status(500).json({error: 'Some products not found',
+      id: (error as StockError).id
+    })
+  }
+})
+
+// 2) createOrder which validates the stock a second time and calls the createorder paypal endpoint, returning an orderID
+// 3) onApprove which updates stock levels and captures the payment - use atomic operation here to capture payment and update stock
+    // onApprove also needs to update the basket information for the user
+    // This is also where a task-queue would be implemented to send confirmation emails
 
 // Route for retrieving a list of the users orders
 orderRouter.get('/', authenticateUser, async (_req: AuthenticatedRequest, res: Response) => {

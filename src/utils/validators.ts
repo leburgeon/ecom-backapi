@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import mongoose from 'mongoose'
 
 export const NewUserSchema = z.object({
   name: z.string(),
@@ -32,9 +33,18 @@ export const PaginationDetailsSchema = z.object({
   limit: z.coerce.number()
 })
 
+export const objectIdSchema = z.string().refine(val => mongoose.Types.ObjectId.isValid(val), {
+  message: 'Invalid ObjectId'
+})
+
 export const NewOrderSchema = z.object({
   products: z.object({
-    id: z.string(),
+    id: objectIdSchema,
     quantity: z.coerce.number()
   }).array()
 })
+
+export const BasketSchema = z.object({
+  id: objectIdSchema,
+  quantity: z.coerce.number()
+}).array()

@@ -1,12 +1,14 @@
 import { Request, Response, NextFunction } from "express"
-import {  NewOrderSchema, JwtUserPayloadSchema, LoginCredentialsSchema, NewProductSchema, NewUserSchema, PaginationDetailsSchema } from "./validators"
+import {  NewOrderSchema, JwtUserPayloadSchema, LoginCredentialsSchema, NewProductSchema, NewUserSchema, PaginationDetailsSchema, BasketSchema } from "./validators"
 import mongoose from "mongoose"
 import { ZodError } from "zod"
 import jwt, { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 import config from "./config"
 import User from "../models/User"
-import { AuthenticatedRequest, RequestWithSearchFilters } from "../types"
+import { AuthenticatedRequest, Basket, RequestWithSearchFilters } from "../types"
 import { z } from 'zod'
+import Product from "../models/Product"
+import { StockError } from "./Errors"
 
 // Middlewear for parsing the new request and ensuring that the request has fiels for page limit and page number 
 
@@ -168,6 +170,78 @@ export const parseProductToBasket = (req: Request, _res: Response, next: NextFun
   next()
 }
 
+// Middlewear for parsing a basket from the request body
+export const parseBasket = (req: Request, _res: Response, next: NextFunction) => {
+  try {
+    BasketSchema.parse(req.body)
+    next()
+  } catch (error) {
+    next(error)
+  }
+}
+
+// Method for async validating stock, and returning an object with the results
+const validateBasket = async (basket: Basket) => {
+  // Checks the stock for all the items in the basket and returns an array of promises for these checks
+  const promiseArrayOfStockChecks = basket.map(async (item) => {
+    const product = await Product.findById(item.id)
+    if (!product){
+      throw new StockError('Product not found', item.id)
+    }
+    if (product.stock < item.quantity){
+      throw new StockError('Out of stock', item.id)
+    }
+  })
+
+  // Once resolved, an array of the results of each of these checks
+  const stockCheckResults = await Promise.allSettled(promiseArrayOfStockChecks)
+
+  // Object for storing the ids of not found or out of stock products
+  const missingStock = {
+    notFound: new Array(),
+    outOfStock: new Array()
+  }
+
+  // Itterates over the results, adding any ids to the correct arrays in the stock results
+  stockCheckResults.forEach(result => {
+    if (result.status === 'rejected'){
+      const error = result.reason
+      if (error instanceof StockError){
+        if (error.message === 'Out of stock'){
+          missingStock.outOfStock.push(error.id) 
+        } else if (error.message === 'Product not found'){
+          missingStock.notFound.push(error.id)
+        }
+      }
+    }
+  })
+
+  return missingStock
+}
+
+// Middlewear for validating the stock levels and product ids from a basket [{id, quantity}]
+export const validateBasketStock = async (req: Request<unknown, unknown, Basket>, res: Response, next: NextFunction) => {
+  const basket = req.body
+    // Handles empty basket case
+    if (basket.length === 0){
+      res.status(500).json({error: 'Basket was empty'})
+    } else {
+        const missingStock = await validateBasket(basket)
+  
+        if (missingStock.notFound.length > 0){
+          res.status(500).json({error: 'Some products not found',
+            ids: missingStock.notFound
+          })
+        } else if (missingStock.outOfStock.length > 0){
+          res.status(400).json({error: 'Some products out of stock',
+            ids: missingStock.outOfStock
+          })
+        } else {
+          next()
+        }
+      }
+}
+
 export const requestLogger = (req: Request, _res: Response, next: NextFunction) => {
   const method = req.method
   const url = req.originalUrl
@@ -175,6 +249,8 @@ export const requestLogger = (req: Request, _res: Response, next: NextFunction) 
   console.log(`Method: ${method} Url: ${url} Body: ${body}`)
   next()
 }
+
+
 
 // Error handler for the application
 export const errorHandler = (error: unknown, _req: Request, res: Response, _next: NextFunction) => {

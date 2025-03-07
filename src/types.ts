@@ -1,5 +1,5 @@
 import { Request } from "express"
-import { NewOrderSchema, NewUserSchema, LoginCredentialsSchema, JwtUserPayloadSchema, NewProductSchema } from "./utils/validators"
+import { NewOrderSchema, NewUserSchema, LoginCredentialsSchema, JwtUserPayloadSchema, NewProductSchema, BasketSchema } from "./utils/validators"
 import { z } from 'zod'
 import mongoose from "mongoose"
 
@@ -58,3 +58,6 @@ export interface PageQueriesRequest extends Request {
 
 // Type of the parsed new order request body
 export type NewOrder = z.infer<typeof NewOrderSchema>
+
+export type Basket = z.infer<typeof BasketSchema>
+

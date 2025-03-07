@@ -20,9 +20,33 @@ const Order_1 = __importDefault(require("../models/Order"));
 // import paypalClient from '../utils/paypalClient'
 // Baseurl is /api/orders
 const orderRouter = express_1.default.Router();
+// TODO:
+// Create a route for 1) checkout, which validates stock and returns a formatted basket to be displayed on the checkout page, aswell as returned with the createOrder route
+orderRouter.post('/checkout', middlewear_1.parseBasket, middlewear_1.validateBasketStock, (req, res, _next) => __awaiter(void 0, void 0, void 0, function* () {
+    // Calculates the total for the products in the basket and formats the basket to return
+    const populatedBasket = req.body;
+    let totalPrice = 0;
+    const basketToReturn = populatedBasket.map(basketItem => {
+        const { price, name, _id } = basketItem.product;
+        totalPrice += price * basketItem.quantity;
+        return {
+            product: {
+                price, name, id: _id
+            },
+            quantity: basketItem.quantity
+        };
+    });
+    console.log(populatedBasket);
+    console.log('totalPrice', totalPrice);
+    res.status(200).json({ basket: basketToReturn, totalPrice });
+}));
+// 2) createOrder which validates the stock a second time and calls the createorder paypal endpoint, returning an orderID
+// 3) onApprove which updates stock levels and captures the payment - use atomic operation here to capture payment and update stock
+// onApprove also needs to update the basket information for the user
+// This is also where a task-queue would be implemented to send confirmation emails
 // Route for retrieving a list of the users orders
 orderRouter.get('/', middlewear_1.authenticateUser, (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    res.status(200).json(['order1, order2']);
+    res.status(200).json(['order1', 'order2']);
 }));
 // Route for creating a new order and reducing the stock count, 
 orderRouter.post('/', middlewear_1.authenticateUser, (req, res) => __awaiter(void 0, void 0, void 0, function* () {

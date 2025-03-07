@@ -17,7 +17,24 @@ const middlewear_1 = require("../utils/middlewear");
 const Basket_1 = __importDefault(require("../models/Basket"));
 const Product_1 = __importDefault(require("../models/Product"));
 const basketRouter = express_1.default.Router();
-// Route for getting the basket information of the user
+// Route for getting the populated basket information of the user
+basketRouter.get('', middlewear_1.authenticateUser, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const userBasket = yield Basket_1.default.findOne({ user: (_a = req.user) === null || _a === void 0 ? void 0 : _a._id }).populate('products.productId', 'name price stock firstImage');
+        const productsArray = userBasket === null || userBasket === void 0 ? void 0 : userBasket.products.map(product => {
+            return {
+                product: product.productId,
+                quantity: product.quantity
+            };
+        });
+        res.status(200).json({ basket: productsArray });
+    }
+    catch (error) {
+        console.error('Error fetching user basket', error);
+        next(error);
+    }
+}));
 basketRouter.post('/add', middlewear_1.authenticateUser, middlewear_1.parseProductToBasket, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const userDoc = req.user;
     const productToAddId = req.body.productId;
@@ -100,8 +117,10 @@ basketRouter.post('/reduce', middlewear_1.authenticateUser, middlewear_1.parsePr
                 // )
                 // UPDATE:: Performing operations that could cause a conflict throws a mongo server error
                 // Seperated operations
+                // Decrements by the specified amount
                 yield Basket_1.default.updateOne({ _id: userBasket._id, 'products.productId': productToReduce._id }, { $inc: { 'products.$.quantity': -quantityToRemove } });
-                yield Basket_1.default.updateOne({ _id: userBasket._id }, { $pull: { products: { quantity: { $lte: 1 } } } });
+                // Deletes all products in the basket with a quantity less than 1
+                yield Basket_1.default.updateOne({ _id: userBasket._id }, { $pull: { products: { quantity: { $lte: 0 } } } });
                 const usersBasketAfter = yield Basket_1.default.findById(userBasket._id);
                 res.status(200).json({ basketCount: usersBasketAfter === null || usersBasketAfter === void 0 ? void 0 : usersBasketAfter.products.length });
             }
@@ -112,6 +131,25 @@ basketRouter.post('/reduce', middlewear_1.authenticateUser, middlewear_1.parsePr
         res.status(500).json({
             error: 'There was an error removing this from the basket'
         });
+    }
+}));
+// Route for removing an item from the basket entirely
+basketRouter.delete('/:id', middlewear_1.authenticateUser, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    try {
+        const productToRemove = yield Product_1.default.findById(req.params.id);
+        if (productToRemove) {
+            // Perform an update operation on the products array, for the basket document with the matching user id
+            yield Basket_1.default.updateOne({ user: (_a = req.user) === null || _a === void 0 ? void 0 : _a._id }, { $pull: { products: { productId: productToRemove._id } } });
+        }
+        // Calculates the number of unique items in the basket
+        const userBasket = yield Basket_1.default.findOne({ user: (_b = req.user) === null || _b === void 0 ? void 0 : _b._id });
+        const basketCount = userBasket === null || userBasket === void 0 ? void 0 : userBasket.products.length;
+        res.status(200).json({ basketCount });
+    }
+    catch (error) {
+        console.error('Error removing from basket entirely', error);
+        next(error);
     }
 }));
 exports.default = basketRouter;

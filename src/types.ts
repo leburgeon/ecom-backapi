@@ -1,7 +1,7 @@
 import { Request } from "express"
 import { NewOrderSchema, NewUserSchema, LoginCredentialsSchema, JwtUserPayloadSchema, NewProductSchema, BasketSchema } from "./utils/validators"
 import { z } from 'zod'
-import mongoose from "mongoose"
+import mongoose, {  ObjectId } from "mongoose"
 
 // Type of a request body with the required field for a new user
 export type NewUser = z.infer<typeof NewUserSchema>
@@ -25,6 +25,12 @@ export interface UserDocument {
   _id: mongoose.Types.ObjectId,
   isAdmin: boolean,
   orders: mongoose.Types.ObjectId[]
+}
+
+export interface ProductDocument {
+  name: string,
+  _id: mongoose.Types.ObjectId,
+  price: number
 }
 
 // Type of a jwt payload with user info
@@ -61,3 +67,11 @@ export type NewOrder = z.infer<typeof NewOrderSchema>
 
 export type Basket = z.infer<typeof BasketSchema>
 
+export type PopulatedBasket = {product: ProductDocument, quantity: number}[]
+
+export type ValidatedAndPopulatedBasketResult = {
+  missingStock: {notFound: ObjectId[],
+    outOfStock: ObjectId[]
+  },
+  populatedItems: PopulatedBasket
+}

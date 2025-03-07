@@ -5,7 +5,7 @@ import { ZodError } from "zod"
 import jwt, { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 import config from "./config"
 import User from "../models/User"
-import { AuthenticatedRequest, Basket, RequestWithSearchFilters } from "../types"
+import { AuthenticatedRequest, Basket, RequestWithSearchFilters, ValidatedAndPopulatedBasketResult } from "../types"
 import { z } from 'zod'
 import Product from "../models/Product"
 import { StockError } from "./Errors"
@@ -170,6 +170,8 @@ export const parseProductToBasket = (req: Request, _res: Response, next: NextFun
   next()
 }
 
+
+
 // Middlewear for parsing a basket from the request body
 export const parseBasket = (req: Request, _res: Response, next: NextFunction) => {
   try {
@@ -181,7 +183,7 @@ export const parseBasket = (req: Request, _res: Response, next: NextFunction) =>
 }
 
 // Method for async validating stock, and returning an object with the results
-const validateBasket = async (basket: Basket) => {
+const validateBasketAndPopulate = async (basket: Basket): Promise<ValidatedAndPopulatedBasketResult> => {
   // Checks the stock for all the items in the basket and returns an array of promises for these checks
   const promiseArrayOfStockChecks = basket.map(async (item) => {
     const product = await Product.findById(item.id)
@@ -190,6 +192,9 @@ const validateBasket = async (basket: Basket) => {
     }
     if (product.stock < item.quantity){
       throw new StockError('Out of stock', item.id)
+    }
+    return {quantity: item.quantity,
+      product,
     }
   })
 
@@ -202,6 +207,9 @@ const validateBasket = async (basket: Basket) => {
     outOfStock: new Array()
   }
 
+  // Array for storing the populated and validated items
+  const populatedItems = new Array()
+
   // Itterates over the results, adding any ids to the correct arrays in the stock results
   stockCheckResults.forEach(result => {
     if (result.status === 'rejected'){
@@ -213,20 +221,22 @@ const validateBasket = async (basket: Basket) => {
           missingStock.notFound.push(error.id)
         }
       }
+    } else {
+      populatedItems.push(result.value)
     }
   })
 
-  return missingStock
+  return {missingStock, populatedItems}
 }
 
 // Middlewear for validating the stock levels and product ids from a basket [{id, quantity}]
-export const validateBasketStock = async (req: Request<unknown, unknown, Basket>, res: Response, next: NextFunction) => {
+export const validateBasketStock = async (req: Request, res: Response, next: NextFunction) => {
   const basket = req.body
     // Handles empty basket case
     if (basket.length === 0){
       res.status(500).json({error: 'Basket was empty'})
     } else {
-        const missingStock = await validateBasket(basket)
+        const {missingStock, populatedItems} = await validateBasketAndPopulate(basket) 
   
         if (missingStock.notFound.length > 0){
           res.status(500).json({error: 'Some products not found',
@@ -237,9 +247,10 @@ export const validateBasketStock = async (req: Request<unknown, unknown, Basket>
             ids: missingStock.outOfStock
           })
         } else {
+          req.body = populatedItems
           next()
         }
-      }
+    }
 }
 
 export const requestLogger = (req: Request, _res: Response, next: NextFunction) => {
@@ -261,7 +272,7 @@ export const errorHandler = (error: unknown, _req: Request, res: Response, _next
   } else if ((error as any).code === 11000 && error instanceof Error) { // For handling mongo duplicate key error
     res.status(409).json({error: 'Duplicate Key Error: ' + error.message})
   } else if (error instanceof ZodError) { // For handling duplicate key error
-    res.status(401).json({error: error.issues})
+    res.status(400).json({error: error.issues})
   } else if (error instanceof JsonWebTokenError) {
     res.status(401).json({error: `${error.name}:${error.message}`})
   } else if (error instanceof TokenExpiredError){

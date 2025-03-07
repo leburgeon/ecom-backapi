@@ -45,7 +45,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.errorHandler = exports.requestLogger = exports.parseProductToBasket = exports.parseFilters = exports.parseNewOrder = exports.parsePagination = exports.parseLoginCredentials = exports.parseNewProduct = exports.parseNewUser = exports.authenticateAdmin = exports.authenticateUser = void 0;
+exports.errorHandler = exports.requestLogger = exports.validateBasketStock = exports.parseBasket = exports.parseProductToBasket = exports.parseFilters = exports.parseNewOrder = exports.parsePagination = exports.parseLoginCredentials = exports.parseNewProduct = exports.parseNewUser = exports.authenticateAdmin = exports.authenticateUser = void 0;
 const validators_1 = require("./validators");
 const mongoose_1 = __importDefault(require("mongoose"));
 const zod_1 = require("zod");
@@ -53,6 +53,8 @@ const jsonwebtoken_1 = __importStar(require("jsonwebtoken"));
 const config_1 = __importDefault(require("./config"));
 const User_1 = __importDefault(require("../models/User"));
 const zod_2 = require("zod");
+const Product_1 = __importDefault(require("../models/Product"));
+const Errors_1 = require("./Errors");
 // Middlewear for parsing the new request and ensuring that the request has fiels for page limit and page number 
 // Middlewear for authenticating a user and extracting the user info into the request
 const authenticateUser = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
@@ -211,6 +213,86 @@ const parseProductToBasket = (req, _res, next) => {
     next();
 };
 exports.parseProductToBasket = parseProductToBasket;
+// Middlewear for parsing a basket from the request body
+const parseBasket = (req, _res, next) => {
+    try {
+        validators_1.BasketSchema.parse(req.body);
+        next();
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.parseBasket = parseBasket;
+// Method for async validating stock, and returning an object with the results
+const validateBasketAndPopulate = (basket) => __awaiter(void 0, void 0, void 0, function* () {
+    // Checks the stock for all the items in the basket and returns an array of promises for these checks
+    const promiseArrayOfStockChecks = basket.map((item) => __awaiter(void 0, void 0, void 0, function* () {
+        const product = yield Product_1.default.findById(item.id);
+        if (!product) {
+            throw new Errors_1.StockError('Product not found', item.id);
+        }
+        if (product.stock < item.quantity) {
+            throw new Errors_1.StockError('Out of stock', item.id);
+        }
+        return { quantity: item.quantity,
+            product,
+        };
+    }));
+    // Once resolved, an array of the results of each of these checks
+    const stockCheckResults = yield Promise.allSettled(promiseArrayOfStockChecks);
+    // Object for storing the ids of not found or out of stock products
+    const missingStock = {
+        notFound: new Array(),
+        outOfStock: new Array()
+    };
+    // Array for storing the populated and validated items
+    const populatedItems = new Array();
+    // Itterates over the results, adding any ids to the correct arrays in the stock results
+    stockCheckResults.forEach(result => {
+        if (result.status === 'rejected') {
+            const error = result.reason;
+            if (error instanceof Errors_1.StockError) {
+                if (error.message === 'Out of stock') {
+                    missingStock.outOfStock.push(error.id);
+                }
+                else if (error.message === 'Product not found') {
+                    missingStock.notFound.push(error.id);
+                }
+            }
+        }
+        else {
+            populatedItems.push(result.value);
+        }
+    });
+    return { missingStock, populatedItems };
+});
+// Middlewear for validating the stock levels and product ids from a basket [{id, quantity}]
+const validateBasketStock = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const basket = req.body;
+    // Handles empty basket case
+    if (basket.length === 0) {
+        res.status(500).json({ error: 'Basket was empty' });
+    }
+    else {
+        const { missingStock, populatedItems } = yield validateBasketAndPopulate(basket);
+        if (missingStock.notFound.length > 0) {
+            res.status(500).json({ error: 'Some products not found',
+                ids: missingStock.notFound
+            });
+        }
+        else if (missingStock.outOfStock.length > 0) {
+            res.status(400).json({ error: 'Some products out of stock',
+                ids: missingStock.outOfStock
+            });
+        }
+        else {
+            req.body = populatedItems;
+            next();
+        }
+    }
+});
+exports.validateBasketStock = validateBasketStock;
 const requestLogger = (req, _res, next) => {
     const method = req.method;
     const url = req.originalUrl;
@@ -231,7 +313,7 @@ const errorHandler = (error, _req, res, _next) => {
         res.status(409).json({ error: 'Duplicate Key Error: ' + error.message });
     }
     else if (error instanceof zod_1.ZodError) { // For handling duplicate key error
-        res.status(401).json({ error: error.issues });
+        res.status(400).json({ error: error.issues });
     }
     else if (error instanceof jsonwebtoken_1.JsonWebTokenError) {
         res.status(401).json({ error: `${error.name}:${error.message}` });

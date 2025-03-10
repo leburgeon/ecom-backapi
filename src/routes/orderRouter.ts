@@ -1,22 +1,22 @@
 import express, { NextFunction, Response } from 'express'
 import { validateBasketStock, authenticateUser, parseBasket } from '../utils/middlewear'
-import { AuthenticatedRequest, NewOrder, PopulatedBasket } from '../types'
+import { AuthenticatedRequest, NewOrder, PopulatedBasket, ProcessedBasket, Basket } from '../types'
 import Product from '../models/Product'
-import mongoose from 'mongoose'
+import mongoose, { ObjectId } from 'mongoose'
 import Order from '../models/Order'
+import paypalController from '../utils/paypalController'
 // import paypalClient from '../utils/paypalClient'
 
 // Baseurl is /api/orders
 const orderRouter = express.Router()
 
-// TODO:
 // Create a route for 1) checkout, which validates stock and returns a formatted basket to be displayed on the checkout page, aswell as returned with the createOrder route
 orderRouter.post('/checkout', parseBasket, validateBasketStock, async(req: AuthenticatedRequest<unknown, unknown, PopulatedBasket>, res: Response, _next: NextFunction) => {
   // Calculates the total for the products in the basket and formats the basket to return
   const populatedBasket = req.body
 
-
   let totalPrice = 0
+
   const basketToReturn = populatedBasket.map(basketItem => {
     const { price, name, _id } = basketItem.product
     totalPrice += price * basketItem.quantity
@@ -28,20 +28,57 @@ orderRouter.post('/checkout', parseBasket, validateBasketStock, async(req: Authe
     }
   })
 
-  console.log(populatedBasket)
-  console.log('totalPrice', totalPrice)
   res.status(200).json({basket: basketToReturn, totalPrice})
 })
 
-// 2) createOrder which validates the stock a second time and calls the createorder paypal endpoint, returning an orderID
-// 3) onApprove which updates stock levels and captures the payment - use atomic operation here to capture payment and update stock
-    // onApprove also needs to update the basket information for the user
-    // This is also where a task-queue would be implemented to send confirmation emails
 
-// Route for retrieving a list of the users orders
-orderRouter.get('/', authenticateUser, async (_req: AuthenticatedRequest, res: Response) => {
-  res.status(200).json(['order1', 'order2'])
+// 2) createOrder which validates the stock a second time and calls the createorder paypal endpoint, returning an orderID
+orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedRequest<unknown, unknown, Basket>, res: Response, _next: NextFunction) => {
+
+  // Basket of ids and quantities
+  const basket = req.body
+
+    // For storing array of items in the basket that are in the created order with a processed total
+  const orderItems: ProcessedBasket = {
+    items: new Array(),
+    totalCost: 0
+  }
+
+  // For storing out of stock ids and quantity missing 
+  const outOfStockItems: {id: ObjectId, quantity: number}[] = new Array()
+
+  
+  
+
+  // Attempts to call the create order method, and returns the response of the operation
+  try {
+    const processedBasket: ProcessedBasket = {
+      items: simpleBasket,
+      totalCost
+    }
+    const { jsonResponse, httpStatusCode } = await paypalController.createOrder(processedBasket)
+    
+    res.status(httpStatusCode).json(jsonResponse)
+
+  } catch (error: unknown){
+    let errorMessage = 'Failed to create order: '
+    console.error(errorMessage, error)
+
+    if (error instanceof Error){
+      errorMessage += error.message
+    }
+
+    res.status(500).json({error: errorMessage})
+  }
 })
+
+
+
+
+
+
+
+
 
 // Route for creating a new order and reducing the stock count, 
 
@@ -127,6 +164,24 @@ orderRouter.post('/', authenticateUser, async (req: AuthenticatedRequest<unknown
     // Ends the session
     await session.endSession()
   }
+})
+
+// 3) onApprove which updates stock levels and captures the payment - use atomic operation here to capture payment and update stock
+    // onApprove also needs to update the basket information for the user
+    // This is also where a task-queue would be implemented to send confirmation emails
+
+orderRouter.post('/capture/:id', authenticateUser, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const { id } = req.params
+
+  // Busniness logic for checking the stock lev
+
+})
+
+
+
+// Route for retrieving a list of the users orders
+orderRouter.get('', authenticateUser, async (_req: AuthenticatedRequest, res: Response) => {
+  res.status(200).json(['order1', 'order2'])
 })
 
 export default orderRouter

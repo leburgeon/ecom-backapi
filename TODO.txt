@@ -6,9 +6,9 @@ FRONTEND:
   
 
 BACKEND:
-  - Write the checkout route to validate the stock levels and return formatted cart
   - Write route for creating an order
   - Write route for capturing the order
+  - Write in checks to createOrder to ensure that there are no duplicate ids, as this can cause write errors in the mongoose session. 
 
 TODOS:
 
@@ -33,3 +33,4 @@ Later
 - Add an index for user id of baskets
 - Implememt refresh tokens so that frontend requests a fresh access token if expired.
    - somehow do this without user knowledge
+

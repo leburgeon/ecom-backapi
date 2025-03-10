@@ -40,7 +40,7 @@ export const authenticateUser = async (req: AuthenticatedRequest, res: Response,
         next()
       }
     } catch (error: unknown) {
-      console.log('Error thrown during auth')
+      console.error('Error thrown during auth')
       next(error)
     }
   }
@@ -174,8 +174,9 @@ export const parseProductToBasket = (req: Request, _res: Response, next: NextFun
 
 // Middlewear for parsing a basket from the request body
 export const parseBasket = (req: Request, _res: Response, next: NextFunction) => {
+  const { body } = req
   try {
-    BasketSchema.parse(req.body)
+    BasketSchema.parse(body)
     next()
   } catch (error) {
     next(error)
@@ -233,7 +234,7 @@ const validateBasketAndPopulate = async (basket: Basket): Promise<ValidatedAndPo
 export const validateBasketStock = async (req: Request, res: Response, next: NextFunction) => {
   const basket = req.body
     // Handles empty basket case
-    if (basket.length === 0){
+    if (!basket || basket.length === 0){
       res.status(500).json({error: 'Basket was empty'})
     } else {
         const {missingStock, populatedItems} = await validateBasketAndPopulate(basket) 
@@ -272,6 +273,7 @@ export const errorHandler = (error: unknown, _req: Request, res: Response, _next
   } else if ((error as any).code === 11000 && error instanceof Error) { // For handling mongo duplicate key error
     res.status(409).json({error: 'Duplicate Key Error: ' + error.message})
   } else if (error instanceof ZodError) { // For handling duplicate key error
+    console.error('There was a zod error:', error)
     res.status(400).json({error: error.issues})
   } else if (error instanceof JsonWebTokenError) {
     res.status(401).json({error: `${error.name}:${error.message}`})

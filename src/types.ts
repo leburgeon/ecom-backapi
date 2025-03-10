@@ -67,7 +67,21 @@ export type NewOrder = z.infer<typeof NewOrderSchema>
 
 export type Basket = z.infer<typeof BasketSchema>
 
+// Type for an array of product documents with a quantity
 export type PopulatedBasket = {product: ProductDocument, quantity: number}[]
+
+// Type of basket with total price, to be passed around the checkout routes
+export type ProcessedBasket = {
+  items: {
+    product: {
+      id: string,
+    price: number,
+    name: string
+    },
+    quantity: number
+  }[],
+  totalCost: number
+}
 
 export type ValidatedAndPopulatedBasketResult = {
   missingStock: {notFound: ObjectId[],

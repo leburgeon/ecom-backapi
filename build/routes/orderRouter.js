@@ -17,10 +17,11 @@ const middlewear_1 = require("../utils/middlewear");
 const Product_1 = __importDefault(require("../models/Product"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const Order_1 = __importDefault(require("../models/Order"));
+const paypalController_1 = __importDefault(require("../utils/paypalController"));
 // import paypalClient from '../utils/paypalClient'
 // Baseurl is /api/orders
 const orderRouter = express_1.default.Router();
-// TODO:
+// TODO: DONE
 // Create a route for 1) checkout, which validates stock and returns a formatted basket to be displayed on the checkout page, aswell as returned with the createOrder route
 orderRouter.post('/checkout', middlewear_1.parseBasket, middlewear_1.validateBasketStock, (req, res, _next) => __awaiter(void 0, void 0, void 0, function* () {
     // Calculates the total for the products in the basket and formats the basket to return
@@ -41,12 +42,39 @@ orderRouter.post('/checkout', middlewear_1.parseBasket, middlewear_1.validateBas
     res.status(200).json({ basket: basketToReturn, totalPrice });
 }));
 // 2) createOrder which validates the stock a second time and calls the createorder paypal endpoint, returning an orderID
-// 3) onApprove which updates stock levels and captures the payment - use atomic operation here to capture payment and update stock
-// onApprove also needs to update the basket information for the user
-// This is also where a task-queue would be implemented to send confirmation emails
-// Route for retrieving a list of the users orders
-orderRouter.get('/', middlewear_1.authenticateUser, (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    res.status(200).json(['order1', 'order2']);
+orderRouter.post('', middlewear_1.authenticateUser, middlewear_1.validateBasketStock, (req, res, _next) => __awaiter(void 0, void 0, void 0, function* () {
+    // Formattes the basket to pass to the create order function
+    const populatedBasket = req.body;
+    let totalCost = 0;
+    const basket = populatedBasket.map(basketItem => {
+        const { price, name, _id } = basketItem.product;
+        totalCost += price * basketItem.quantity;
+        return {
+            product: {
+                price, name, id: _id.toString()
+            },
+            quantity: basketItem.quantity
+        };
+    });
+    // Attempts to call the create order method, and returns the response of the operation
+    try {
+        const processedBasket = {
+            items: basket,
+            totalCost
+        };
+        const { jsonResponse, httpStatusCode } = yield paypalController_1.default.createOrder(processedBasket);
+        console.log('#################################');
+        console.log(jsonResponse);
+        res.status(httpStatusCode).json(jsonResponse);
+    }
+    catch (error) {
+        let errorMessage = 'Failed to create order: ';
+        console.error(errorMessage, error);
+        if (error instanceof Error) {
+            errorMessage += error.message;
+        }
+        res.status(500).json({ error: errorMessage });
+    }
 }));
 // Route for creating a new order and reducing the stock count, 
 orderRouter.post('/', middlewear_1.authenticateUser, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -118,5 +146,12 @@ orderRouter.post('/', middlewear_1.authenticateUser, (req, res) => __awaiter(voi
         // Ends the session
         yield session.endSession();
     }
+}));
+// 3) onApprove which updates stock levels and captures the payment - use atomic operation here to capture payment and update stock
+// onApprove also needs to update the basket information for the user
+// This is also where a task-queue would be implemented to send confirmation emails
+// Route for retrieving a list of the users orders
+orderRouter.get('', middlewear_1.authenticateUser, (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    res.status(200).json(['order1', 'order2']);
 }));
 exports.default = orderRouter;

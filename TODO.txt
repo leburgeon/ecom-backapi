@@ -3,12 +3,16 @@ FRONTEND:
   - TODO: Create a successful payment page with order refresh
   - Create a payment failed operation, or return to basket with payment failed message
   - Integrate checkout option to call the checkout route and then take the user to the checkout page
+- Add an available stock field to the items in the basket so that stock can be validated
+- The checkout route should validate the stock, and return the amount that needs to be reduced in basket if not enough
+- When a stock error is returned from the createOrder route, the frontend should re-call checkout and update the stock in the basket
   
 
 BACKEND:
   - Write route for creating an order
   - Write route for capturing the order
-  - Write in checks to createOrder to ensure that there are no duplicate ids, as this can cause write errors in the mongoose session. 
+  - Write in checks to createOrder to ensure that there are no duplicate ids, as this can cause write errors in the mongoose session. Same as checkout for errors
+  - Change checkout route to not only validate the stock and the product ids, but send back the quantity of the stock that is missing so that the information can be used frontend
 
 TODOS:
 
@@ -33,4 +37,5 @@ Later
 - Add an index for user id of baskets
 - Implememt refresh tokens so that frontend requests a fresh access token if expired.
    - somehow do this without user knowledge
+  
 

@@ -35,19 +35,24 @@ export const processBasket = async (basket: {id: string, quantity: number}[]): P
   }
 
   // If all valid ids and products found, processes the basket using the product docs, appending the total
+  // Throws an error if any of the products have less stock than the required quantity
   productDocsForCalculatingTotal.forEach(productDoc => {
     const idString = productDoc._id.toString()
     const quantity = basketItems.get(idString) || 0
-    const price = productDoc.price
-    processedBasket.totalCost += price * quantity
-    processedBasket.items.push({
-      product: {
-        id: idString,
-        name: productDoc.name,
-        price: price
-      },
-      quantity
-    })
+    if (quantity > productDoc.stock){
+      throw new Error('Not enough stock')
+    } else {
+      const price = productDoc.price
+      processedBasket.totalCost += price * quantity
+      processedBasket.items.push({
+        product: {
+          id: idString,
+          name: productDoc.name,
+          price: price
+        },
+        quantity
+      })
+    }
   })
 
   return processedBasket

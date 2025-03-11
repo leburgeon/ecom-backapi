@@ -48,7 +48,7 @@ const createOrder = async (cart: ProcessedBasket) => {
   try {
     const {body, ...httpResponse } = await ordersController.ordersCreate(collect)
     return {
-      jsonResponse: JSON.parse(body.toString()),
+      jsonResponse: body,
       httpStatusCode: httpResponse.statusCode
     }
   } catch (error){

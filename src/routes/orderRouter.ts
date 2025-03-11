@@ -2,7 +2,7 @@ import express, { NextFunction, Response } from 'express'
 import { validateBasketStock, authenticateUser, parseBasket } from '../utils/middlewear'
 import { AuthenticatedRequest, NewOrder, PopulatedBasket, ProcessedBasket, Basket } from '../types'
 import Product from '../models/Product'
-import mongoose, { ObjectId } from 'mongoose'
+import mongoose from 'mongoose'
 import Order from '../models/Order'
 import paypalController from '../utils/paypalController'
 import { processBasket } from '../utils/helpers'
@@ -35,47 +35,60 @@ orderRouter.post('/checkout', parseBasket, validateBasketStock, async(req: Authe
 
 // 2) createOrder which validates the stock a second time and calls the createorder paypal endpoint, returning an orderID
 orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedRequest<unknown, unknown, Basket>, res: Response, _next: NextFunction) => {
-  // Starts a session and transaction, within which to complete the stock updates and the processing order creation
-  const session = await mongoose.startSession()
-  session.startTransaction()
-  
-  try {
+  try{
+    // 1) Proccesses the basket to create the paypal order
     // Processes the basket by finding the producs and calculating the total
     // Throws an error if basket empty, any products not found, or if there is not enough stock on any of the product docs
     const processedBasket: ProcessedBasket = await processBasket(req.body)
-    
-    // For each of the items in the processed basket, perform an update operation, first checking if there is enough stock to perform the action
-    const updateOperations = processedBasket.items.map(({ quantity, product }) => {
-      // The filter query searches for the procut with the matching id but only if there is enough stock to perform the operation
-      return Product.updateOne(
-        {_id: product.id, stock: {$gte: quantity}},// Ensures the stock exists
-        {$inc: {stock: - quantity}}, // Reduces the stock by the amount
-        {session} // Performs the updates within the session
-      )
-    })
 
-    const results = await Promise.all(updateOperations)
-
-    // If any of the updates to the stock did not occur, throw an error!
-    if (results.some(result => result.modifiedCount === 0)){
-      throw new Error('Not enough stock for all operation')
-    }     
-
-    // At this point, the stock in the session has been reduced, call the createOrder method on the paypal controller
+    // Calls the orderCreate on the paypal controller
+    // Will throw error if failed to create order
     const { jsonResponse, httpStatusCode } = await paypalController.createOrder(processedBasket)
+
+    // Starts a session and transaction, within which to complete the stock updates and the processing order creation
+    const session = await mongoose.startSession()
+    session.startTransaction()
+
+    try {
+      // For each of the items in the processed basket, perform an update operation, first checking if there is enough stock to perform the action
+      const updateOperations = processedBasket.items.map(({ quantity, product }) => {
+        // The filter query searches for the procut with the matching id but only if there is enough stock to perform the operation
+        return Product.updateOne(
+          {_id: product.id, stock: {$gte: quantity}},// Ensures the stock exists
+          {$inc: {stock: - quantity}}, // Reduces the stock by the amount
+          {session} // Performs the updates within the session
+        )
+      })
+
+      const results = await Promise.all(updateOperations)
+
+      // If any of the updates to the stock did not occur, throw an error
+      if (results.some(result => result.modifiedCount === 0)){
+        throw new Error('Not enough stock for all operation')
+      } 
+
+      // TODO: create order within the transaction with the paypal id
+      
+    } catch (error){
+      await session.abortTransaction()
+      console.log('Transaction aborted')
+      throw error
+    } finally {
+      await session.endSession()
+    }
+
+    // If all docs updated and order doc created, returns the paypal order status and json response
     res.status(httpStatusCode).json(jsonResponse)
+
   } catch (error){
-    await session.abortTransaction()
+    // Handles occurance of any errors throughout process
     let errorMessage = 'Error creating order: '
     if (error instanceof Error){
       errorMessage += error.message
     }
     console.error(errorMessage, error)
     res.status(500).json({error: errorMessage})
-  } finally {
-    await session.endSession()
   }
-
 })
 
 

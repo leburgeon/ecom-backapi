@@ -18,10 +18,10 @@ const Product_1 = __importDefault(require("../models/Product"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const Order_1 = __importDefault(require("../models/Order"));
 const paypalController_1 = __importDefault(require("../utils/paypalController"));
+const helpers_1 = require("../utils/helpers");
 // import paypalClient from '../utils/paypalClient'
 // Baseurl is /api/orders
 const orderRouter = express_1.default.Router();
-// TODO: DONE
 // Create a route for 1) checkout, which validates stock and returns a formatted basket to be displayed on the checkout page, aswell as returned with the createOrder route
 orderRouter.post('/checkout', middlewear_1.parseBasket, middlewear_1.validateBasketStock, (req, res, _next) => __awaiter(void 0, void 0, void 0, function* () {
     // Calculates the total for the products in the basket and formats the basket to return
@@ -37,42 +37,55 @@ orderRouter.post('/checkout', middlewear_1.parseBasket, middlewear_1.validateBas
             quantity: basketItem.quantity
         };
     });
-    console.log(populatedBasket);
-    console.log('totalPrice', totalPrice);
     res.status(200).json({ basket: basketToReturn, totalPrice });
 }));
 // 2) createOrder which validates the stock a second time and calls the createorder paypal endpoint, returning an orderID
-orderRouter.post('', middlewear_1.authenticateUser, middlewear_1.validateBasketStock, (req, res, _next) => __awaiter(void 0, void 0, void 0, function* () {
-    // Formattes the basket to pass to the create order function
-    const populatedBasket = req.body;
-    let totalCost = 0;
-    const basket = populatedBasket.map(basketItem => {
-        const { price, name, _id } = basketItem.product;
-        totalCost += price * basketItem.quantity;
-        return {
-            product: {
-                price, name, id: _id.toString()
-            },
-            quantity: basketItem.quantity
-        };
-    });
-    // Attempts to call the create order method, and returns the response of the operation
+orderRouter.post('', middlewear_1.authenticateUser, middlewear_1.parseBasket, (req, res, _next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const processedBasket = {
-            items: basket,
-            totalCost
-        };
+        // 1) Proccesses the basket to create the paypal order
+        // Processes the basket by finding the producs and calculating the total
+        // Throws an error if basket empty, any products not found, or if there is not enough stock on any of the product docs
+        const processedBasket = yield (0, helpers_1.processBasket)(req.body);
+        // Calls the orderCreate on the paypal controller
+        // Will throw error if failed to create order
         const { jsonResponse, httpStatusCode } = yield paypalController_1.default.createOrder(processedBasket);
-        console.log('#################################');
-        console.log(jsonResponse);
+        // Starts a session and transaction, within which to complete the stock updates and the processing order creation
+        const session = yield mongoose_1.default.startSession();
+        session.startTransaction();
+        try {
+            // For each of the items in the processed basket, perform an update operation, first checking if there is enough stock to perform the action
+            const updateOperations = processedBasket.items.map(({ quantity, product }) => {
+                // The filter query searches for the procut with the matching id but only if there is enough stock to perform the operation
+                return Product_1.default.updateOne({ _id: product.id, stock: { $gte: quantity } }, // Ensures the stock exists
+                { $inc: { stock: -quantity } }, // Reduces the stock by the amount
+                { session } // Performs the updates within the session
+                );
+            });
+            const results = yield Promise.all(updateOperations);
+            // If any of the updates to the stock did not occur, throw an error
+            if (results.some(result => result.modifiedCount === 0)) {
+                throw new Error('Not enough stock for all operation');
+            }
+            // TODO: create order within the transaction with the paypal id
+        }
+        catch (error) {
+            yield session.abortTransaction();
+            console.log('Transaction aborted');
+            throw error;
+        }
+        finally {
+            yield session.endSession();
+        }
+        // If all docs updated and order doc created, returns the paypal order status and json response
         res.status(httpStatusCode).json(jsonResponse);
     }
     catch (error) {
-        let errorMessage = 'Failed to create order: ';
-        console.error(errorMessage, error);
+        // Handles occurance of any errors throughout process
+        let errorMessage = 'Error creating order: ';
         if (error instanceof Error) {
             errorMessage += error.message;
         }
+        console.error(errorMessage, error);
         res.status(500).json({ error: errorMessage });
     }
 }));
@@ -150,6 +163,10 @@ orderRouter.post('/', middlewear_1.authenticateUser, (req, res) => __awaiter(voi
 // 3) onApprove which updates stock levels and captures the payment - use atomic operation here to capture payment and update stock
 // onApprove also needs to update the basket information for the user
 // This is also where a task-queue would be implemented to send confirmation emails
+// orderRouter.post('/capture/:id', authenticateUser, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+//   const { id } = req.params
+//   // Busniness logic for checking the stock lev
+// })
 // Route for retrieving a list of the users orders
 orderRouter.get('', middlewear_1.authenticateUser, (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
     res.status(200).json(['order1', 'order2']);

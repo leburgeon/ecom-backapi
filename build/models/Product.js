@@ -19,7 +19,8 @@ const productSchema = new mongoose_1.default.Schema({
     },
     stock: {
         type: Number,
-        default: 0
+        default: 0,
+        min: 0
     },
     description: {
         type: mongoose_1.default.Schema.Types.ObjectId,

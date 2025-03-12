@@ -82,7 +82,7 @@ const authenticateUser = (req, res, next) => __awaiter(void 0, void 0, void 0, f
             }
         }
         catch (error) {
-            console.log('Error thrown during auth');
+            console.error('Error thrown during auth');
             next(error);
         }
     }
@@ -215,8 +215,9 @@ const parseProductToBasket = (req, _res, next) => {
 exports.parseProductToBasket = parseProductToBasket;
 // Middlewear for parsing a basket from the request body
 const parseBasket = (req, _res, next) => {
+    const { body } = req;
     try {
-        validators_1.BasketSchema.parse(req.body);
+        validators_1.BasketSchema.parse(body);
         next();
     }
     catch (error) {
@@ -271,7 +272,7 @@ const validateBasketAndPopulate = (basket) => __awaiter(void 0, void 0, void 0, 
 const validateBasketStock = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const basket = req.body;
     // Handles empty basket case
-    if (basket.length === 0) {
+    if (!basket || basket.length === 0) {
         res.status(500).json({ error: 'Basket was empty' });
     }
     else {
@@ -313,6 +314,7 @@ const errorHandler = (error, _req, res, _next) => {
         res.status(409).json({ error: 'Duplicate Key Error: ' + error.message });
     }
     else if (error instanceof zod_1.ZodError) { // For handling duplicate key error
+        console.error('There was a zod error:', error);
         res.status(400).json({ error: error.issues });
     }
     else if (error instanceof jsonwebtoken_1.JsonWebTokenError) {

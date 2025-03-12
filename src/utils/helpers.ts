@@ -57,3 +57,12 @@ export const processBasket = async (basket: {id: string, quantity: number}[]): P
 
   return processedBasket
 }
+
+export const mapProcessedBasketItemsToOrderItems = (basket: ProcessedBasket) => {
+  return basket.items.map(item => ({
+    product: item.product.id,
+    name: item.product.name,
+    price: item.product.price,
+    quantity: item.quantity,
+  }))
+}

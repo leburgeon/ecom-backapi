@@ -1,11 +1,11 @@
 import express, { NextFunction, Response } from 'express'
 import { validateBasketStock, authenticateUser, parseBasket } from '../utils/middlewear'
-import { AuthenticatedRequest, NewOrder, PopulatedBasket, ProcessedBasket, Basket } from '../types'
+import { AuthenticatedRequest,  PopulatedBasket, ProcessedBasket, Basket } from '../types'
 import Product from '../models/Product'
 import mongoose from 'mongoose'
 import Order from '../models/Order'
 import paypalController from '../utils/paypalController'
-import { processBasket } from '../utils/helpers'
+import { processBasket, mapProcessedBasketItemsToOrderItems } from '../utils/helpers'
 // import paypalClient from '../utils/paypalClient'
 
 // Baseurl is /api/orders
@@ -44,6 +44,7 @@ orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedReq
     // Calls the orderCreate on the paypal controller
     // Will throw error if failed to create order
     const { jsonResponse, httpStatusCode } = await paypalController.createOrder(processedBasket)
+    const { id: paypalOrderId, status: paypalOrderStatus } = jsonResponse
 
     // Starts a session and transaction, within which to complete the stock updates and the processing order creation
     const session = await mongoose.startSession()
@@ -68,6 +69,23 @@ orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedReq
       } 
 
       // TODO: create order within the transaction with the paypal id
+      const newOrder = new Order({
+        user: req.user?._id,
+        items: mapProcessedBasketItemsToOrderItems(processedBasket),
+        totalCost: processedBasket.totalCost,
+        status: 'PENDING',
+        payment: {
+          method: 'PAYPAL',
+          status: paypalOrderStatus,
+          transactionId: paypalOrderId
+        }
+      })
+
+      await newOrder.save({session})
+      await session.commitTransaction()
+
+      // If all docs updated and order doc created, returns the paypal order status and json response
+      res.status(httpStatusCode).json(jsonResponse)
       
     } catch (error){
       await session.abortTransaction()
@@ -76,9 +94,6 @@ orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedReq
     } finally {
       await session.endSession()
     }
-
-    // If all docs updated and order doc created, returns the paypal order status and json response
-    res.status(httpStatusCode).json(jsonResponse)
 
   } catch (error){
     // Handles occurance of any errors throughout process
@@ -92,109 +107,16 @@ orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedReq
 })
 
 
-
-
-
-
-
-
-
-// Route for creating a new order and reducing the stock count, 
-
-orderRouter.post('/', authenticateUser, async (req: AuthenticatedRequest<unknown, unknown, NewOrder>, res: Response) => {
-  const { products } = req.body
-  const { user } = req
-
-  // For starting a transaction session
-  const session = await mongoose.startSession()
-  session.startTransaction()
-
-  // Try block attempts to perform the database updates within the transaction
-  // If an error thrown within try block, transaction aborted
-  try {
-    // For each of the products in the array, this block attempts to:
-    // - Validate that the product exists, throwing an error if it is not found
-    // - Asserts that there is sufficient stock for the quantity of the product
-    // - Decrement the amount of stock from the stock reserve
-    // - Save the stock updated document
-    let totalCost = 0
-
-    const productDocsStockChanged = await Promise.all(products.map( async product => {
-      const doc = await Product.findById(product.id).session(session)
-
-      // Asserts that the product with the id exists
-      if (!doc) {
-        throw new Error('Product not found!')
-      }
-      
-      // Asserts that there is sufficient quantity in the reserved stock and throws error if not
-      if (product.quantity > doc.stock){
-        throw new Error(`Insufficient stock for ${doc.name} x ${product.quantity}`)
-      }
-
-      // Updates the cost total 
-      totalCost += (doc.price * product.quantity)
-
-      // Decrements the stock reserve and returns the document (not saved)
-      doc.stock -= product.quantity
-
-      // Then attempts to save the doc
-      await doc.save()
-      return {...product, doc}
-    }))
-
-    // Creates an array representing the list of products for the new order document
-    const productsForNewOrder = productDocsStockChanged.map(product => {
-      return {product: product.doc._id.toString(),
-        quantity: product.quantity,
-        price: product.doc.price
-      }
-    })
-
-    // Creates the new order document
-    const newOrder = new Order({
-      products: productsForNewOrder,
-      user: user?._id.toString(),
-      total: totalCost,
-      status: 'placed'
-    })
-
-    // Saves the new order
-    await newOrder.save()
-
-    // Commits the transaction changes if this point is reached with no errors thrown
-    await session.commitTransaction()
-    
-    // Sends confirmation that the order has been created
-    res.status(201).json({orderId: newOrder._id.toString()})
-
-    // TODO
-    // Needs to delete the basket/cart if order placed successfully 
-
-  } catch (error: unknown){
-    // If error is thrown, transaction aborted and changes rolled back
-    await session.abortTransaction()
-    let errorMessage = `Error placing order:`
-    if (error instanceof Error){
-      errorMessage += error.message
-    }
-    res.status(500).json({error: errorMessage})
-  } finally {
-    // Ends the session
-    await session.endSession()
-  }
-})
-
-// 3) onApprove which updates stock levels and captures the payment - use atomic operation here to capture payment and update stock
+// 3) onApprove which updates stock levels and captures the payment
     // onApprove also needs to update the basket information for the user
     // This is also where a task-queue would be implemented to send confirmation emails
 
-orderRouter.post('/capture/:id', authenticateUser, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  const { id } = req.params
+// orderRouter.post('/capture/:id', authenticateUser, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+//   const { id } = req.params
 
-  // Busniness logic for checking the stock lev
+//   // Busniness logic for checking the stock lev
 
-})
+// })
 
 
 

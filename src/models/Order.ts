@@ -1,7 +1,12 @@
 import mongoose from 'mongoose'
 
 const orderSchema = new mongoose.Schema({
-  products: [
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  items: [
     {
       product: {
         type: mongoose.Schema.Types.ObjectId,
@@ -15,22 +20,36 @@ const orderSchema = new mongoose.Schema({
       price: {
         type: Number,
         required: true
+      },
+      name: {
+        type: String,
+        required: true
       }
     }
   ],
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  total: {
+  totalCost: {
     type: Number,
     required: true
   },
   status: {
     type: String,
-    required: true
+    default: 'PENDING',
+    enum: {
+      values: ['PENDING', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED']
+    }
+  },
+  payment: {
+    method: String,
+    status: String,
+    transactionId: String
+  },
+  shippingAddress: {
+    fullName: String,
+    address: String,
+    city: String,
+    postalCode: String,
+    country: String
   }
-})
+},{timestamps: true})
 
 export default mongoose.model('Order', orderSchema)

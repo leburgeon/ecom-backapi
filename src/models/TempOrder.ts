@@ -1,5 +1,16 @@
 import mongoose from "mongoose"
 
+export const totalCostSchema = new mongoose.Schema({
+  currencyCode: {
+    type: String,
+    required: true
+  },
+  value: {
+    type: Number,
+    required: true
+  }
+}, { _id: false });
+
 const tempOrderSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
@@ -27,8 +38,8 @@ const tempOrderSchema = new mongoose.Schema({
     }
   ],
   totalCost: {
-    currencyCode: {type: String, required: true},
-    value: {type: Number, required: true}
+    type: totalCostSchema,
+    required: true
   },
   paymentTransactionId: String
 }, {timestamps: true})

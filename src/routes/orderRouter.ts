@@ -104,14 +104,14 @@ orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedReq
 // 3) onApprove which updates stock levels and captures the payment
 //   onApprove also needs to update the basket information for the user
 //   This is also where a task-queue would be implemented to send confirmation emails
-orderRouter.post('/capture/:orderID', authenticateUser, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+orderRouter.post('/capture/:orderID', authenticateUser, async (req: AuthenticatedRequest, res: Response, _next: NextFunction) => {
   const { orderID } = req.params
 
   // Try block for validating that the paypal order details match the temp order details
   try {
     const tempOrder = await TempOrder.findOne({user: req.user?._id, paymentTransactionId: orderID})
     if (!tempOrder){
-      throw new Error('No order data found')
+      throw new Error('No temp order data found')
     }
 
     const { purchaseUnits } = await paypalController.getOrder(orderID)
@@ -119,10 +119,74 @@ orderRouter.post('/capture/:orderID', authenticateUser, async (req: Authenticate
       throw new Error('Purchase units on paypal order not found')
     }
     
-    validatePurchaseUnitsAgainstTempOrder(purchaseUnits[0], tempOrder)
+    // For validating that the items, total cost and currencies on the tempOrder and PurchaseUnits match. 
+    // Used for security, throws error with reason message if any mis-match, missing, or too many items
+    try {
+      validatePurchaseUnitsAgainstTempOrder(purchaseUnits[0], tempOrder)
+    } catch (error){
+      let errorMessage = 'Error validating the purchaseUnit against tempOrder items'
+      if (error instanceof Error){
+        errorMessage += error.message
+      }
+      throw new Error(errorMessage)
+    }
 
+    // For attempting to capture the order, throws an error if failed
+    const { jsonResponse, httpStatusCode } = await paypalController.captureOrder(orderID)
+    const {status: paypalOrderStatus, id: paypalOrderId} = jsonResponse
 
+    // For creating the order document, reducing the stock reservation and deleting the tempOrder in a session
+    console.log('session started!')
+    const session = await mongoose.startSession()
+    session.startTransaction()
 
+    try {
+      // Creates new order
+      const newOrder = new Order({
+        user: req.user?._id,
+        items: tempOrder.items,
+        totalCost: tempOrder.totalCost,
+        status: 'PAID',
+        payment: {
+          method: 'PAYPAL',
+          status: paypalOrderStatus,
+          transactionId: paypalOrderId
+        }
+      })
+      await newOrder.save({session})
+
+      // Deletes the tempOrder
+      await TempOrder.deleteOne({_id: tempOrder._id}).session(session)
+
+      // Updates the stock reservation for each of the products
+      const reservationUpdates = tempOrder.items.map(item => {
+        return Product.updateOne({_id: item.product},
+          {$inc : {reserved: - item.quantity}},
+          {session}
+        )
+      })
+
+      // Checks that all the reservation amounts recieved an update
+      const results = await Promise.all(reservationUpdates)
+      if (results.some(result => {
+        return result.modifiedCount === 0
+      })){
+        throw new Error('One or more reservation updates failed after creating an order!')
+      }
+
+      await session.commitTransaction()
+    } catch (error){
+      await session.abortTransaction()
+      let errorMessage = 'Error creating an order and aborted transaction: '
+      if (error instanceof Error){
+        errorMessage += error.message
+      }
+      throw new Error(errorMessage)
+    } finally {
+      await session.endSession()
+    }
+
+    res.status(httpStatusCode).json(jsonResponse)
   } catch (error){
     let errorMessage = 'Error capturing order: '
     if (error instanceof Error){
@@ -131,83 +195,7 @@ orderRouter.post('/capture/:orderID', authenticateUser, async (req: Authenticate
     console.error(error)
     res.status(500).json({error: errorMessage})
   }
-
-  
-
 })
-
-// 2) createOrder which validates the stock a second time and calls the createorder paypal endpoint, returning an orderID
-orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedRequest<unknown, unknown, Basket>, res: Response, _next: NextFunction) => {
-  try{
-    // 1) Proccesses the basket to create the paypal order
-    // Throws an error if basket empty, any products not found, or if there is not enough stock on any of the product docs
-    const processedBasket: ProcessedBasket = await processBasket(req.body)
-
-    // Calls the orderCreate on the paypal controller
-    // Will throw error if failed to create order
-    const { jsonResponse, httpStatusCode } = await paypalController.createOrder(processedBasket)
-    const { id: paypalOrderId, status: paypalOrderStatus } = jsonResponse
-
-    // Starts a session and transaction, within which to complete the stock updates and the processing order creation
-    const session = await mongoose.startSession()
-    session.startTransaction()
-
-    try {
-      // For each of the items in the processed basket, perform an update operation, first checking if there is enough stock to perform the action
-      const updateOperations = processedBasket.items.map(({ quantity, product }) => {
-        // The filter query searches for the procut with the matching id but only if there is enough stock to perform the operation
-        return Product.updateOne(
-          {_id: product.id, stock: {$gte: quantity}},// Ensures the stock exists
-          {$inc: {stock: - quantity}}, // Reduces the stock by the amount
-          {session} // Performs the updates within the session
-        )
-      })
-
-      const results = await Promise.all(updateOperations)
-
-      // If any of the updates to the stock did not occur, throw an error
-      if (results.some(result => result.modifiedCount === 0)){
-        throw new Error('Not enough stock for all operation')
-      } 
-
-      // TODO: create order within the transaction with the paypal id
-      const newOrder = new Order({
-        user: req.user?._id,
-        items: mapProcessedBasketItemsToOrderItems(processedBasket),
-        totalCost: processedBasket.totalCost,
-        status: 'PENDING',
-        payment: {
-          method: 'PAYPAL',
-          status: paypalOrderStatus,
-          transactionId: paypalOrderId
-        }
-      })
-
-      await newOrder.save({session})
-      await session.commitTransaction()
-
-      // If all docs updated and order doc created, returns the paypal order status and json response
-      res.status(httpStatusCode).json(jsonResponse)
-      
-    } catch (error){
-      await session.abortTransaction()
-      console.log('Transaction aborted')
-      throw error
-    } finally {
-      await session.endSession()
-    }
-
-  } catch (error){
-    // Handles occurance of any errors throughout process
-    let errorMessage = 'Error creating order: '
-    if (error instanceof Error){
-      errorMessage += error.message
-    }
-    console.error(errorMessage, error)
-    res.status(500).json({error: errorMessage})
-  }
-})
-
 
 // 3) onApprove which updates stock levels and captures the payment
     // onApprove also needs to update the basket information for the user

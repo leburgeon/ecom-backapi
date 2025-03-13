@@ -57,7 +57,8 @@ const createOrder = (cart) => __awaiter(void 0, void 0, void 0, function* () {
                     currency_code: "GBP",
                     value: item.product.price
                 },
-                quantity: item.quantity
+                quantity: item.quantity,
+                sku: item.product.id
             };
         }),
         prefer: 'return=minimal'
@@ -66,7 +67,7 @@ const createOrder = (cart) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const _a = yield ordersController.ordersCreate(collect), { body } = _a, httpResponse = __rest(_a, ["body"]);
         return {
-            jsonResponse: body,
+            jsonResponse: JSON.parse(body.toString()),
             httpStatusCode: httpResponse.statusCode
         };
     }
@@ -78,4 +79,37 @@ const createOrder = (cart) => __awaiter(void 0, void 0, void 0, function* () {
         throw new Error(errorMessage);
     }
 });
-exports.default = { createOrder };
+const captureOrder = (orderId) => __awaiter(void 0, void 0, void 0, function* () {
+    const collect = {
+        id: orderId,
+        prefer: "return=minimal"
+    };
+    try {
+        const _a = yield ordersController.ordersCapture(collect), { body } = _a, httpResponse = __rest(_a, ["body"]);
+        console.log('Captured! In paypalController.captureOrder');
+        return {
+            jsonResponse: JSON.parse(body.toString()),
+            httpStatusCode: httpResponse.statusCode
+        };
+    }
+    catch (error) {
+        let errorMessage = 'Error capturing payment: ';
+        console.error('Error thrown in paypalController on captureOrder', error);
+        if (error instanceof Error) {
+            errorMessage += error.message;
+        }
+        throw new Error(errorMessage);
+    }
+});
+const getOrder = (orderId) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { body } = yield ordersController.ordersGet({ id: orderId });
+        return JSON.parse(body.toString());
+    }
+    catch (error) {
+        const errorMessage = 'Error fetching the order information before verify';
+        console.error(errorMessage, error);
+        throw new Error(errorMessage);
+    }
+});
+exports.default = { createOrder, captureOrder, getOrder };

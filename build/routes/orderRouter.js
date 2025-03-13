@@ -19,6 +19,7 @@ const mongoose_1 = __importDefault(require("mongoose"));
 const Order_1 = __importDefault(require("../models/Order"));
 const paypalController_1 = __importDefault(require("../utils/paypalController"));
 const helpers_1 = require("../utils/helpers");
+const TempOrder_1 = __importDefault(require("../models/TempOrder"));
 // import paypalClient from '../utils/paypalClient'
 // Baseurl is /api/orders
 const orderRouter = express_1.default.Router();
@@ -39,34 +40,44 @@ orderRouter.post('/checkout', middlewear_1.parseBasket, middlewear_1.validateBas
     });
     res.status(200).json({ basket: basketToReturn, totalPrice });
 }));
-// 2) createOrder which validates the stock a second time and calls the createorder paypal endpoint, returning an orderID
+// Order router for creating the paypal order, and a temp order for order validation onApprove()
 orderRouter.post('', middlewear_1.authenticateUser, middlewear_1.parseBasket, (req, res, _next) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         // 1) Proccesses the basket to create the paypal order
-        // Processes the basket by finding the producs and calculating the total
         // Throws an error if basket empty, any products not found, or if there is not enough stock on any of the product docs
         const processedBasket = yield (0, helpers_1.processBasket)(req.body);
         // Calls the orderCreate on the paypal controller
         // Will throw error if failed to create order
         const { jsonResponse, httpStatusCode } = yield paypalController_1.default.createOrder(processedBasket);
+        const { id: paypalOrderId } = jsonResponse;
         // Starts a session and transaction, within which to complete the stock updates and the processing order creation
         const session = yield mongoose_1.default.startSession();
         session.startTransaction();
+        // Try block for performing the reservations and creating temporary order
         try {
-            // For each of the items in the processed basket, perform an update operation, first checking if there is enough stock to perform the action
-            const updateOperations = processedBasket.items.map(({ quantity, product }) => {
-                // The filter query searches for the procut with the matching id but only if there is enough stock to perform the operation
-                return Product_1.default.updateOne({ _id: product.id, stock: { $gte: quantity } }, // Ensures the stock exists
-                { $inc: { stock: -quantity } }, // Reduces the stock by the amount
-                { session } // Performs the updates within the session
-                );
+            const reservationOperations = processedBasket.items.map(({ quantity, product }) => {
+                return Product_1.default.updateOne({ _id: product.id, stock: { $gte: quantity } }, { $inc: { reserved: quantity, stock: -quantity } }, { session });
             });
-            const results = yield Promise.all(updateOperations);
             // If any of the updates to the stock did not occur, throw an error
+            const results = yield Promise.all(reservationOperations);
             if (results.some(result => result.modifiedCount === 0)) {
                 throw new Error('Not enough stock for all operation');
             }
-            // TODO: create order within the transaction with the paypal id
+            // Creates the temp order
+            const tempOrder = new TempOrder_1.default({
+                user: (_a = req.user) === null || _a === void 0 ? void 0 : _a._id,
+                items: (0, helpers_1.mapProcessedBasketItemsToOrderItems)(processedBasket),
+                totalCost: {
+                    currencyCode: 'GBP',
+                    value: processedBasket.totalCost
+                },
+                paymentTransactionId: paypalOrderId
+            });
+            yield tempOrder.save({ session });
+            yield session.commitTransaction();
+            // Since paypal order created an reservations made, returns the success to the paypal SDK
+            res.status(httpStatusCode).json(jsonResponse);
         }
         catch (error) {
             yield session.abortTransaction();
@@ -76,8 +87,6 @@ orderRouter.post('', middlewear_1.authenticateUser, middlewear_1.parseBasket, (r
         finally {
             yield session.endSession();
         }
-        // If all docs updated and order doc created, returns the paypal order status and json response
-        res.status(httpStatusCode).json(jsonResponse);
     }
     catch (error) {
         // Handles occurance of any errors throughout process
@@ -89,78 +98,93 @@ orderRouter.post('', middlewear_1.authenticateUser, middlewear_1.parseBasket, (r
         res.status(500).json({ error: errorMessage });
     }
 }));
-// Route for creating a new order and reducing the stock count, 
-orderRouter.post('/', middlewear_1.authenticateUser, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { products } = req.body;
-    const { user } = req;
-    // For starting a transaction session
-    const session = yield mongoose_1.default.startSession();
-    session.startTransaction();
-    // Try block attempts to perform the database updates within the transaction
-    // If an error thrown within try block, transaction aborted
+// 3) onApprove which updates stock levels and captures the payment
+//   onApprove also needs to update the basket information for the user
+//   This is also where a task-queue would be implemented to send confirmation emails
+orderRouter.post('/capture/:orderID', middlewear_1.authenticateUser, (req, res, _next) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    const { orderID } = req.params;
+    // Try block for validating that the paypal order details match the temp order details
     try {
-        // For each of the products in the array, this block attempts to:
-        // - Validate that the product exists, throwing an error if it is not found
-        // - Asserts that there is sufficient stock for the quantity of the product
-        // - Decrement the amount of stock from the stock reserve
-        // - Save the stock updated document
-        let totalCost = 0;
-        const productDocsStockChanged = yield Promise.all(products.map((product) => __awaiter(void 0, void 0, void 0, function* () {
-            const doc = yield Product_1.default.findById(product.id).session(session);
-            // Asserts that the product with the id exists
-            if (!doc) {
-                throw new Error('Product not found!');
+        const tempOrder = yield TempOrder_1.default.findOne({ user: (_a = req.user) === null || _a === void 0 ? void 0 : _a._id, paymentTransactionId: orderID });
+        if (!tempOrder) {
+            throw new Error('No temp order data found');
+        }
+        const { purchaseUnits } = yield paypalController_1.default.getOrder(orderID);
+        if (!purchaseUnits) {
+            throw new Error('Purchase units on paypal order not found');
+        }
+        // For validating that the items, total cost and currencies on the tempOrder and PurchaseUnits match. 
+        // Used for security, throws error with reason message if any mis-match, missing, or too many items
+        try {
+            (0, helpers_1.validatePurchaseUnitsAgainstTempOrder)(purchaseUnits[0], tempOrder);
+        }
+        catch (error) {
+            let errorMessage = 'Error validating the purchaseUnit against tempOrder items';
+            if (error instanceof Error) {
+                errorMessage += error.message;
             }
-            // Asserts that there is sufficient quantity in the reserved stock and throws error if not
-            if (product.quantity > doc.stock) {
-                throw new Error(`Insufficient stock for ${doc.name} x ${product.quantity}`);
+            throw new Error(errorMessage);
+        }
+        // For attempting to capture the order, throws an error if failed
+        const { jsonResponse, httpStatusCode } = yield paypalController_1.default.captureOrder(orderID);
+        const { status: paypalOrderStatus, id: paypalOrderId } = jsonResponse;
+        // For creating the order document, reducing the stock reservation and deleting the tempOrder in a session
+        console.log('session started!');
+        const session = yield mongoose_1.default.startSession();
+        session.startTransaction();
+        try {
+            // Creates new order
+            const newOrder = new Order_1.default({
+                user: (_b = req.user) === null || _b === void 0 ? void 0 : _b._id,
+                items: tempOrder.items,
+                totalCost: tempOrder.totalCost,
+                status: 'PAID',
+                payment: {
+                    method: 'PAYPAL',
+                    status: paypalOrderStatus,
+                    transactionId: paypalOrderId
+                }
+            });
+            yield newOrder.save({ session });
+            // Deletes the tempOrder
+            yield TempOrder_1.default.deleteOne({ _id: tempOrder._id }).session(session);
+            // Updates the stock reservation for each of the products
+            const reservationUpdates = tempOrder.items.map(item => {
+                return Product_1.default.updateOne({ _id: item.product }, { $inc: { reserved: -item.quantity } }, { session });
+            });
+            // Checks that all the reservation amounts recieved an update
+            const results = yield Promise.all(reservationUpdates);
+            if (results.some(result => {
+                return result.modifiedCount === 0;
+            })) {
+                throw new Error('One or more reservation updates failed after creating an order!');
             }
-            // Updates the cost total 
-            totalCost += (doc.price * product.quantity);
-            // Decrements the stock reserve and returns the document (not saved)
-            doc.stock -= product.quantity;
-            // Then attempts to save the doc
-            yield doc.save();
-            return Object.assign(Object.assign({}, product), { doc });
-        })));
-        // Creates an array representing the list of products for the new order document
-        const productsForNewOrder = productDocsStockChanged.map(product => {
-            return { product: product.doc._id.toString(),
-                quantity: product.quantity,
-                price: product.doc.price
-            };
-        });
-        // Creates the new order document
-        const newOrder = new Order_1.default({
-            products: productsForNewOrder,
-            user: user === null || user === void 0 ? void 0 : user._id.toString(),
-            total: totalCost,
-            status: 'placed'
-        });
-        // Saves the new order
-        yield newOrder.save();
-        // Commits the transaction changes if this point is reached with no errors thrown
-        yield session.commitTransaction();
-        // Sends confirmation that the order has been created
-        res.status(201).json({ orderId: newOrder._id.toString() });
-        // TODO
-        // Needs to delete the basket/cart if order placed successfully 
+            yield session.commitTransaction();
+        }
+        catch (error) {
+            yield session.abortTransaction();
+            let errorMessage = 'Error creating an order and aborted transaction: ';
+            if (error instanceof Error) {
+                errorMessage += error.message;
+            }
+            throw new Error(errorMessage);
+        }
+        finally {
+            yield session.endSession();
+        }
+        res.status(httpStatusCode).json(jsonResponse);
     }
     catch (error) {
-        // If error is thrown, transaction aborted and changes rolled back
-        yield session.abortTransaction();
-        let errorMessage = `Error placing order:`;
+        let errorMessage = 'Error capturing order: ';
         if (error instanceof Error) {
             errorMessage += error.message;
         }
+        console.error(error);
         res.status(500).json({ error: errorMessage });
     }
-    finally {
-        // Ends the session
-        yield session.endSession();
-    }
 }));
-// 3) onApprove which updates stock levels and captures the payment - use atomic operation here to capture payment and update stock
+// 3) onApprove which updates stock levels and captures the payment
 // onApprove also needs to update the basket information for the user
 // This is also where a task-queue would be implemented to send confirmation emails
 // orderRouter.post('/capture/:id', authenticateUser, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {

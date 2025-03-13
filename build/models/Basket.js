@@ -6,14 +6,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importDefault(require("mongoose"));
 const basketSchema = new mongoose_1.default.Schema({
     user: {
-        type: mongoose_1.default.Types.ObjectId,
+        type: mongoose_1.default.Schema.Types.ObjectId,
         required: true
     },
     products: [
         {
             _id: false,
             productId: {
-                type: mongoose_1.default.Types.ObjectId,
+                type: mongoose_1.default.Schema.Types.ObjectId,
                 ref: 'Product',
                 required: true
             },

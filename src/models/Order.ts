@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { totalCostSchema } from './TempOrder'
 
 const orderSchema = new mongoose.Schema({
   user: {
@@ -28,7 +29,7 @@ const orderSchema = new mongoose.Schema({
     }
   ],
   totalCost: {
-    type: Number,
+    type: totalCostSchema,
     required: true
   },
   status: {

@@ -22,6 +22,11 @@ const productSchema = new mongoose_1.default.Schema({
         default: 0,
         min: 0
     },
+    reserved: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
     description: {
         type: mongoose_1.default.Schema.Types.ObjectId,
         required: true,

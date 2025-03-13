@@ -2,14 +2,14 @@ import mongoose from "mongoose";
 
 const basketSchema = new mongoose.Schema({
   user: {
-    type: mongoose.Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     required: true
   },
   products: [
     {
       _id: false,
       productId: {
-        type: mongoose.Types.ObjectId,
+        type: mongoose.Schema.Types.ObjectId,
         ref: 'Product',
         required: true
       },

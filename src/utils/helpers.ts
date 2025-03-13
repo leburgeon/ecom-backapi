@@ -1,5 +1,7 @@
-import { ProcessedBasket } from "../types";
+import { ProcessedBasket, TempOrderForValidating } from "../types";
 import Product from "../models/Product";
+import { PurchaseUnit } from "@paypal/paypal-server-sdk";
+import { Item } from "@paypal/paypal-server-sdk";
 
 export const processBasket = async (basket: {id: string, quantity: number}[]): Promise<ProcessedBasket> => {
   
@@ -65,4 +67,49 @@ export const mapProcessedBasketItemsToOrderItems = (basket: ProcessedBasket) => 
     price: item.product.price,
     quantity: item.quantity,
   }))
+}
+
+export const validatePurchaseUnitsAgainstTempOrder = (purchaseUnit: PurchaseUnit, tempOrder: TempOrderForValidating) => {
+  const {amount} = purchaseUnit
+  if (!amount) {
+    throw new Error('Purchase unit amount was not defined')
+  }
+
+  const { value, currencyCode } = amount
+  if (Number.parseFloat(value) !== tempOrder.totalCost.value){
+    throw new Error('Purchase unit and temp order had differing total amounts')
+  }
+
+  if (currencyCode !== tempOrder.totalCost.currencyCode){
+    throw new Error('Currencies were not the same')
+  }
+
+  const {items} = purchaseUnit
+  if (!items) {
+    throw new Error('No items to validate in purchase units!')
+  }
+
+  if (items.length !== tempOrder.items.length){
+    throw new Error('Item arrays had differing lengths')
+  }
+
+  // Hash map for each of the purchase unit items, with the sku(documentId as the key)
+  const purchaseUnitItemsMap = new Map()
+  // Sets the map values
+  items.forEach((item: Item) => {
+    const {unitAmount, sku, name, quantity} = item
+    purchaseUnitItemsMap.set(sku, {
+      name, quantity, price: Number.parseFloat(unitAmount.value)
+    })
+  })
+
+  for (let item of tempOrder.items){
+    const ofPurchaseUnit = purchaseUnitItemsMap.get(item.product.toString())
+    if (! ofPurchaseUnit){
+      throw new Error('Could not find a matching id for one of the items in temporder, arrays did not match')
+    }
+    if (ofPurchaseUnit.name !== item.name || ofPurchaseUnit.price !== item.price || ofPurchaseUnit.quantity !== item.quantity){
+      throw new Error('Some information of the items did not match (name?/price?/quantity?/')
+    }
+  }
 }

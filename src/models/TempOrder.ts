@@ -2,7 +2,7 @@ import mongoose from "mongoose"
 
 const tempOrderSchema = new mongoose.Schema({
   user: {
-    type: mongoose.Types.ObjectId,
+    type: mongoose.Schema.Types.ObjectId,
     required: true
   },
   items: [
@@ -26,7 +26,10 @@ const tempOrderSchema = new mongoose.Schema({
       }
     }
   ],
-  totalCost:Number,
+  totalCost: {
+    currencyCode: {type: String, required: true},
+    value: {type: Number, required: true}
+  },
   paymentTransactionId: String
 }, {timestamps: true})
 

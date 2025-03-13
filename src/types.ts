@@ -89,3 +89,16 @@ export type ValidatedAndPopulatedBasketResult = {
   },
   populatedItems: PopulatedBasket
 }
+
+export type TempOrderForValidating = {
+  items: {
+    product: ObjectId,
+    quantity: number,
+    price: number,
+    name: string
+  }[],
+  totalCost: {
+    currencyCode: string,
+    value: number
+  }
+}

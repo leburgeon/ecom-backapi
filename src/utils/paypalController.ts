@@ -1,4 +1,4 @@
-import  {Environment, Client, ApiError, OrdersController} from '@paypal/paypal-server-sdk'
+import  {Environment, Client, ApiError, OrdersController, Order} from '@paypal/paypal-server-sdk'
 import { CheckoutPaymentIntent } from '@paypal/paypal-server-sdk'
 import config from './config'
 import { ProcessedBasket } from '../types'
@@ -38,7 +38,8 @@ const createOrder = async (cart: ProcessedBasket) => {
           currency_code: "GBP",
           value: item.product.price
         },
-        quantity: item.quantity
+        quantity: item.quantity,
+        sku: item.product.id
       }
     }),
     prefer: 'return=minimal'
@@ -60,4 +61,38 @@ const createOrder = async (cart: ProcessedBasket) => {
   }
 }
 
-export default {createOrder}
+const captureOrder = async (orderId: string) => {
+  const collect = {
+    id: orderId,
+    prefer: "return=minimal"
+  }
+
+  try {
+    const {body, ...httpResponse} = await ordersController.ordersCapture(collect)
+    console.log('Captured! In paypalController.captureOrder')
+    return {
+      jsonResponse: JSON.parse(body.toString()),
+      httpStatusCode: httpResponse.statusCode
+    }
+  } catch (error){
+    let errorMessage = 'Error capturing payment: '
+    console.error('Error thrown in paypalController on captureOrder', error)
+    if (error instanceof Error){
+      errorMessage += error.message
+    }
+    throw new Error(errorMessage)
+  }
+}
+
+const getOrder = async (orderId: string): Promise<Order> => {
+  try {
+    const {body} = await ordersController.ordersGet({id: orderId})
+    return JSON.parse(body.toString())
+  } catch (error){
+    const errorMessage = 'Error fetching the order information before verify' 
+    console.error(errorMessage, error)
+    throw new Error(errorMessage)
+  }
+}
+
+export default {createOrder, captureOrder, getOrder}

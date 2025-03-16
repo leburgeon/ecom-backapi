@@ -24,8 +24,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const paypal_server_sdk_1 = require("@paypal/paypal-server-sdk");
-const paypal_server_sdk_2 = require("@paypal/paypal-server-sdk");
 const config_1 = __importDefault(require("./config"));
+const helpers_1 = require("./helpers");
 const client = new paypal_server_sdk_1.Client({
     clientCredentialsAuthCredentials: {
         oAuthClientId: config_1.default.PAYPALCLIENTID,
@@ -35,32 +35,10 @@ const client = new paypal_server_sdk_1.Client({
 });
 const ordersController = new paypal_server_sdk_1.OrdersController(client);
 //const _paymentController = new PaymentsController(client)
-const createOrder = (cart) => __awaiter(void 0, void 0, void 0, function* () {
-    const { totalCost, items } = cart;
-    // Create the collect object
+// Method for creating order
+const createOrder = (basket) => __awaiter(void 0, void 0, void 0, function* () {
     const collect = {
-        body: {
-            intent: paypal_server_sdk_2.CheckoutPaymentIntent.Capture,
-            purchaseUnits: [
-                {
-                    amount: {
-                        currencyCode: 'GBP',
-                        value: totalCost.toString()
-                    }
-                }
-            ]
-        },
-        items: items.map(item => {
-            return {
-                name: item.product.name,
-                unit_amount: {
-                    currency_code: "GBP",
-                    value: item.product.price
-                },
-                quantity: item.quantity,
-                sku: item.product.id
-            };
-        }),
+        body: (0, helpers_1.mapProcessedBasketItemsToPurchaseUnitItems)(basket),
         prefer: 'return=minimal'
     };
     // Attempts to create the order
@@ -72,6 +50,7 @@ const createOrder = (cart) => __awaiter(void 0, void 0, void 0, function* () {
         };
     }
     catch (error) {
+        console.error(error);
         let errorMessage = "Error creating order with orderController: ";
         if (error instanceof paypal_server_sdk_1.ApiError) {
             errorMessage += error.message;
@@ -103,8 +82,8 @@ const captureOrder = (orderId) => __awaiter(void 0, void 0, void 0, function* ()
 });
 const getOrder = (orderId) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { body } = yield ordersController.ordersGet({ id: orderId });
-        return JSON.parse(body.toString());
+        const order = yield ordersController.ordersGet({ id: orderId });
+        return order.result;
     }
     catch (error) {
         const errorMessage = 'Error fetching the order information before verify';

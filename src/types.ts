@@ -91,6 +91,7 @@ export type ValidatedAndPopulatedBasketResult = {
 }
 
 export type TempOrderForValidating = {
+  _id: mongoose.Types.ObjectId,
   items: {
     product: mongoose.Types.ObjectId,
     quantity: number,

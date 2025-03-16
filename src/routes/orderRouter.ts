@@ -5,7 +5,7 @@ import Product from '../models/Product'
 import mongoose from 'mongoose'
 import Order from '../models/Order'
 import paypalController from '../utils/paypalController'
-import { processBasket, mapProcessedBasketItemsToOrderItems, validatePurchaseUnitsAgainstTempOrder } from '../utils/helpers'
+import { processBasket, mapProcessedBasketItemsToOrderItems, validatePurchaseUnitsAgainstTempOrder, creatSessionAndHandleStockCleanup } from '../utils/helpers'
 import TempOrder from '../models/TempOrder'
 // import paypalClient from '../utils/paypalClient'
 
@@ -77,7 +77,9 @@ orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedReq
       })
 
       await tempOrder.save({session})
+      console.log('1')
       await session.commitTransaction()
+      console.log('2')
       
       // Since paypal order created an reservations made, returns the success to the paypal SDK
       res.status(httpStatusCode).json(jsonResponse)
@@ -105,90 +107,56 @@ orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedReq
 //   onApprove also needs to update the basket information for the user
 //   This is also where a task-queue would be implemented to send confirmation emails
 orderRouter.post('/capture/:orderID', authenticateUser, async (req: AuthenticatedRequest, res: Response, _next: NextFunction) => {
-  const { orderID } = req.params
-
-  // Try block for validating that the paypal order details match the temp order details
+  // Try block responsible for validating order, capturing payment, and creating order
+    // success responds 
+    // catch responds error
   try {
+    // VALIDATES ORDER AGAINST TEMPORDER
+    const { orderID } = req.params
     const tempOrder = await TempOrder.findOne({user: req.user?._id, paymentTransactionId: orderID})
     if (!tempOrder){
       throw new Error('No temp order data found')
     }
-
     const { purchaseUnits } = await paypalController.getOrder(orderID)
     if (!purchaseUnits){
       throw new Error('Purchase units on paypal order not found')
+    } else if (purchaseUnits.length !== 1){
+      throw new Error('Purchase units had multiple elements')
     }
-    
-    // For validating that the items, total cost and currencies on the tempOrder and PurchaseUnits match. 
-    // Used for security, throws error with reason message if any mis-match, missing, or too many items
-    try {
-      validatePurchaseUnitsAgainstTempOrder(purchaseUnits[0], tempOrder)
-    } catch (error){
-      let errorMessage = 'Error validating the purchaseUnit against tempOrder items'
-      if (error instanceof Error){
-        errorMessage += error.message
-      }
-      throw new Error(errorMessage)
-    }
+    validatePurchaseUnitsAgainstTempOrder(purchaseUnits[0], tempOrder)
 
     // For attempting to capture the order, throws an error if failed
     const { jsonResponse, httpStatusCode } = await paypalController.captureOrder(orderID)
     const {status: paypalOrderStatus, id: paypalOrderId} = jsonResponse
 
-    // For creating the order document, reducing the stock reservation and deleting the tempOrder in a session
-    console.log('session started!')
-    const session = await mongoose.startSession()
-    session.startTransaction()
-
-    try {
-      // Creates new order
-      const newOrder = new Order({
-        user: req.user?._id,
-        items: tempOrder.items,
-        totalCost: tempOrder.totalCost,
-        status: 'PAID',
-        payment: {
-          method: 'PAYPAL',
-          status: paypalOrderStatus,
-          transactionId: paypalOrderId
-        }
-      })
-      await newOrder.save({session})
-
-      // Deletes the tempOrder
-      await TempOrder.deleteOne({_id: tempOrder._id}).session(session)
-
-      // Updates the stock reservation for each of the products
-      const reservationUpdates = tempOrder.items.map(item => {
-        return Product.updateOne({_id: item.product},
-          {$inc : {reserved: - item.quantity}},
-          {session}
-        )
-      })
-
-      // Checks that all the reservation amounts recieved an update
-      const results = await Promise.all(reservationUpdates)
-      if (results.some(result => {
-        return result.modifiedCount === 0
-      })){
-        throw new Error('One or more reservation updates failed after creating an order!')
+    // Creates new order
+    const newOrder = new Order({
+      user: req.user?._id,
+      items: tempOrder.items,
+      totalCost: tempOrder.totalCost,
+      status: 'PAID',
+      payment: {
+        method: 'PAYPAL',
+        status: paypalOrderStatus,
+        transactionId: paypalOrderId
       }
+    })
+    await newOrder.save()
 
-      await session.commitTransaction()
-    } catch (error){
-      await session.abortTransaction()
-      let errorMessage = 'Error creating an order and aborted transaction: '
-      if (error instanceof Error){
-        errorMessage += error.message
-      }
-      throw new Error(errorMessage)
-    } finally {
-      await session.endSession()
-    }
-
+    // Returns the response to the client since payment captured and order created
     res.status(httpStatusCode).json(jsonResponse)
+    console.log('Order created and then response sent')
+
+    // Deletes the tempOrder document
+    TempOrder.deleteOne({_id: tempOrder._id})
+
+    // Handles updating the stock reservation and deleting the tempOrder in a session
+    // Does not throw an error, future features will add failed reservation updates to a task queue!
+    const userId = (req.user as { _id: mongoose.Types.ObjectId })._id
+    creatSessionAndHandleStockCleanup(userId, tempOrder)
+
   } catch (error){
-    let errorMessage = 'Error capturing order: '
+    let errorMessage = 'Error capturing and creating order document: '
     if (error instanceof Error){
       errorMessage += error.message
     }
@@ -196,18 +164,6 @@ orderRouter.post('/capture/:orderID', authenticateUser, async (req: Authenticate
     res.status(500).json({error: errorMessage})
   }
 })
-
-// 3) onApprove which updates stock levels and captures the payment
-    // onApprove also needs to update the basket information for the user
-    // This is also where a task-queue would be implemented to send confirmation emails
-
-// orderRouter.post('/capture/:id', authenticateUser, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-//   const { id } = req.params
-
-//   // Busniness logic for checking the stock lev
-
-// })
-
 
 
 // Route for retrieving a list of the users orders

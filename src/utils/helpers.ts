@@ -1,7 +1,10 @@
 import { ProcessedBasket, TempOrderForValidating } from "../types";
 import Product from "../models/Product";
-import { PurchaseUnit } from "@paypal/paypal-server-sdk";
+import { OrderRequest, PurchaseUnit } from "@paypal/paypal-server-sdk";
 import { Item } from "@paypal/paypal-server-sdk";
+import { CheckoutPaymentIntent } from "@paypal/paypal-server-sdk";
+import mongoose, { ClientSession  } from "mongoose";
+import Basket from "../models/Basket";
 
 export const processBasket = async (basket: {id: string, quantity: number}[]): Promise<ProcessedBasket> => {
   
@@ -69,6 +72,39 @@ export const mapProcessedBasketItemsToOrderItems = (basket: ProcessedBasket) => 
   }))
 }
 
+export const mapProcessedBasketItemsToPurchaseUnitItems = (basket: ProcessedBasket): OrderRequest => {
+  const { totalCost, items } = basket
+  const itemArray: Item[] = items.map(item => {
+    return{
+      name: item.product.name,
+      unitAmount: {
+        currencyCode: "GBP",
+        value: item.product.price.toString()
+      },
+      quantity: item.quantity.toString(),
+      sku: item.product.id
+    }
+  })
+  
+    // Create the collect object
+    return {
+      intent: CheckoutPaymentIntent.Capture,
+        purchaseUnits: [
+          {
+            amount: {
+              currencyCode: 'GBP',
+              value: totalCost.toString(),
+              breakdown: {itemTotal: {
+                currencyCode: 'GBP',
+                value: totalCost.toString()
+              }}
+            },
+            items: itemArray
+          }
+        ]
+    }
+}
+
 export const validatePurchaseUnitsAgainstTempOrder = (purchaseUnit: PurchaseUnit, tempOrder: TempOrderForValidating) => {
   const {amount} = purchaseUnit
   if (!amount) {
@@ -99,7 +135,7 @@ export const validatePurchaseUnitsAgainstTempOrder = (purchaseUnit: PurchaseUnit
   items.forEach((item: Item) => {
     const {unitAmount, sku, name, quantity} = item
     purchaseUnitItemsMap.set(sku, {
-      name, quantity, price: Number.parseFloat(unitAmount.value)
+      name, quantity: Number.parseFloat(quantity), price: Number.parseFloat(unitAmount.value)
     })
   })
 
@@ -109,7 +145,59 @@ export const validatePurchaseUnitsAgainstTempOrder = (purchaseUnit: PurchaseUnit
       throw new Error('Could not find a matching id for one of the items in temporder, arrays did not match')
     }
     if (ofPurchaseUnit.name !== item.name || ofPurchaseUnit.price !== item.price || ofPurchaseUnit.quantity !== item.quantity){
+      console.log(ofPurchaseUnit.name, item.name, ofPurchaseUnit.price, item.price, ofPurchaseUnit.quantity, item.quantity)
       throw new Error('Some information of the items did not match (name?/price?/quantity?/')
     }
+  }
+}
+
+const handleReservationAndBasketCleanupWithinSession = async (session: ClientSession, userId: mongoose.Types.ObjectId, tempOrder: TempOrderForValidating) => {
+  try {
+    // Updates the stock reservation for each of the products in the tempOrder
+    const reservationUpdates = tempOrder.items.map(item => {
+      return Product.updateOne({_id: item.product},
+        {$inc : {reserved: - item.quantity}},
+        {session}
+      )
+    })
+
+    // Checks that all the reservation amounts recieved an update
+    const results = await Promise.all(reservationUpdates)
+    if (results.some(result => {
+      return result.modifiedCount === 0
+    })){
+      throw new Error('One or more reservation updates failed after creating an order!')
+    }
+
+    // Deletes all basket data associated with the user
+    await Basket.deleteMany({user: userId}).session(session)
+
+  } catch (error){
+    let errorMessage = 'Error handling reservation and basket cleanup: '
+    if (error instanceof Error){
+      errorMessage += error.message
+    }
+    throw new Error(errorMessage)
+  }
+}
+
+export const creatSessionAndHandleStockCleanup = async (userId: mongoose.Types.ObjectId, tempOrder: TempOrderForValidating) => {
+  console.log('session started!')
+  try {
+    const session = await mongoose.startSession()
+    session.startTransaction()
+    try {
+      await handleReservationAndBasketCleanupWithinSession(session, userId, tempOrder)
+      await session.commitTransaction()
+    } catch (error){
+      await session.abortTransaction()
+      // TODO! Add the necessary action to the queue- tempOrder deletion will always be atomic with reservedStock removal
+      throw error
+    } finally {
+      await session.endSession()
+    }
+  } catch (error){
+    // TODO ADD TASK TO QUEUE FOR STOCK CLEANUP
+    console.error(error)
   }
 }

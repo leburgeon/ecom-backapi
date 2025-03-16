@@ -1,7 +1,7 @@
 import  {Environment, Client, ApiError, OrdersController, Order} from '@paypal/paypal-server-sdk'
-import { CheckoutPaymentIntent } from '@paypal/paypal-server-sdk'
 import config from './config'
 import { ProcessedBasket } from '../types'
+import { mapProcessedBasketItemsToPurchaseUnitItems } from './helpers'
 
 const client = new Client({
   clientCredentialsAuthCredentials: {
@@ -14,34 +14,11 @@ const client = new Client({
 const ordersController = new OrdersController(client)
 //const _paymentController = new PaymentsController(client)
 
-const createOrder = async (cart: ProcessedBasket) => {
+// Method for creating order
+const createOrder = async (basket: ProcessedBasket) => {
 
-  const { totalCost, items } = cart
-
-  // Create the collect object
   const collect = {
-    body: {
-      intent: CheckoutPaymentIntent.Capture,
-      purchaseUnits: [
-        {
-          amount: {
-            currencyCode: 'GBP',
-            value: totalCost.toString()
-          }
-        }
-      ]
-    },
-    items: items.map(item => {
-      return{
-        name: item.product.name,
-        unit_amount: {
-          currency_code: "GBP",
-          value: item.product.price
-        },
-        quantity: item.quantity,
-        sku: item.product.id
-      }
-    }),
+    body: mapProcessedBasketItemsToPurchaseUnitItems(basket),
     prefer: 'return=minimal'
   }
 
@@ -53,6 +30,7 @@ const createOrder = async (cart: ProcessedBasket) => {
       httpStatusCode: httpResponse.statusCode
     }
   } catch (error){
+    console.error(error)
     let errorMessage = "Error creating order with orderController: "
     if (error instanceof ApiError){
       errorMessage += error.message
@@ -86,8 +64,8 @@ const captureOrder = async (orderId: string) => {
 
 const getOrder = async (orderId: string): Promise<Order> => {
   try {
-    const {body} = await ordersController.ordersGet({id: orderId})
-    return JSON.parse(body.toString())
+    const order = await ordersController.ordersGet({id: orderId})
+    return order.result
   } catch (error){
     const errorMessage = 'Error fetching the order information before verify' 
     console.error(errorMessage, error)

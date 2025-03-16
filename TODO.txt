@@ -6,6 +6,7 @@ FRONTEND:
 - Add an available stock field to the items in the basket so that stock can be validated
 - The checkout route should validate the stock, and return the amount that needs to be reduced in basket if not enough
 - When a stock error is returned from the createOrder route, the frontend should re-call checkout and update the stock in the basket
+- Add same add to basket timeout as in basket on product page
   
 
 BACKEND:
@@ -37,5 +38,6 @@ Later
 - Add an index for user id of baskets
 - Implememt refresh tokens so that frontend requests a fresh access token if expired.
    - somehow do this without user knowledge
+- Implement routine that cleans up expired tempOrders that have not been handled correctly
   
 

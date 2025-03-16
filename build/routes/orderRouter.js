@@ -103,9 +103,12 @@ orderRouter.post('', middlewear_1.authenticateUser, middlewear_1.parseBasket, (r
 //   This is also where a task-queue would be implemented to send confirmation emails
 orderRouter.post('/capture/:orderID', middlewear_1.authenticateUser, (req, res, _next) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
-    const { orderID } = req.params;
-    // Try block for validating that the paypal order details match the temp order details
+    // Try block responsible for validating order, capturing payment, and creating order
+    // success responds 
+    // catch responds error
     try {
+        // VALIDATES ORDER AGAINST TEMPORDER
+        const { orderID } = req.params;
         const tempOrder = yield TempOrder_1.default.findOne({ user: (_a = req.user) === null || _a === void 0 ? void 0 : _a._id, paymentTransactionId: orderID });
         if (!tempOrder) {
             throw new Error('No temp order data found');
@@ -114,69 +117,34 @@ orderRouter.post('/capture/:orderID', middlewear_1.authenticateUser, (req, res, 
         if (!purchaseUnits) {
             throw new Error('Purchase units on paypal order not found');
         }
-        // For validating that the items, total cost and currencies on the tempOrder and PurchaseUnits match. 
-        // Used for security, throws error with reason message if any mis-match, missing, or too many items
-        try {
-            (0, helpers_1.validatePurchaseUnitsAgainstTempOrder)(purchaseUnits[0], tempOrder);
-        }
-        catch (error) {
-            let errorMessage = 'Error validating the purchaseUnit against tempOrder items';
-            if (error instanceof Error) {
-                errorMessage += error.message;
-            }
-            throw new Error(errorMessage);
-        }
+        (0, helpers_1.validatePurchaseUnitsAgainstTempOrder)(purchaseUnits[0], tempOrder);
         // For attempting to capture the order, throws an error if failed
         const { jsonResponse, httpStatusCode } = yield paypalController_1.default.captureOrder(orderID);
         const { status: paypalOrderStatus, id: paypalOrderId } = jsonResponse;
-        // For creating the order document, reducing the stock reservation and deleting the tempOrder in a session
-        console.log('session started!');
-        const session = yield mongoose_1.default.startSession();
-        session.startTransaction();
-        try {
-            // Creates new order
-            const newOrder = new Order_1.default({
-                user: (_b = req.user) === null || _b === void 0 ? void 0 : _b._id,
-                items: tempOrder.items,
-                totalCost: tempOrder.totalCost,
-                status: 'PAID',
-                payment: {
-                    method: 'PAYPAL',
-                    status: paypalOrderStatus,
-                    transactionId: paypalOrderId
-                }
-            });
-            yield newOrder.save({ session });
-            // Deletes the tempOrder
-            yield TempOrder_1.default.deleteOne({ _id: tempOrder._id }).session(session);
-            // Updates the stock reservation for each of the products
-            const reservationUpdates = tempOrder.items.map(item => {
-                return Product_1.default.updateOne({ _id: item.product }, { $inc: { reserved: -item.quantity } }, { session });
-            });
-            // Checks that all the reservation amounts recieved an update
-            const results = yield Promise.all(reservationUpdates);
-            if (results.some(result => {
-                return result.modifiedCount === 0;
-            })) {
-                throw new Error('One or more reservation updates failed after creating an order!');
+        // Creates new order
+        const newOrder = new Order_1.default({
+            user: (_b = req.user) === null || _b === void 0 ? void 0 : _b._id,
+            items: tempOrder.items,
+            totalCost: tempOrder.totalCost,
+            status: 'PAID',
+            payment: {
+                method: 'PAYPAL',
+                status: paypalOrderStatus,
+                transactionId: paypalOrderId
             }
-            yield session.commitTransaction();
-        }
-        catch (error) {
-            yield session.abortTransaction();
-            let errorMessage = 'Error creating an order and aborted transaction: ';
-            if (error instanceof Error) {
-                errorMessage += error.message;
-            }
-            throw new Error(errorMessage);
-        }
-        finally {
-            yield session.endSession();
-        }
+        });
+        yield newOrder.save();
+        // Returns the response to the client since payment captured and order created
         res.status(httpStatusCode).json(jsonResponse);
+        // Deletes the tempOrder document
+        TempOrder_1.default.deleteOne({ _id: tempOrder._id });
+        // Handles updating the stock reservation and deleting the tempOrder in a session
+        // Does not throw an error!
+        const userId = req.user._id;
+        (0, helpers_1.creatSessionAndHandleStockCleanup)(userId, tempOrder);
     }
     catch (error) {
-        let errorMessage = 'Error capturing order: ';
+        let errorMessage = 'Error capturing and creating order document: ';
         if (error instanceof Error) {
             errorMessage += error.message;
         }

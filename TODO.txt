@@ -14,6 +14,8 @@ BACKEND:
   - Write route for capturing the order
   - Write in checks to createOrder to ensure that there are no duplicate ids, as this can cause write errors in the mongoose session. Same as checkout for errors
   - Change checkout route to not only validate the stock and the product ids, but send back the quantity of the stock that is missing so that the information can be used frontend
+  - Write functionality for aborting checkout to release stock
+  - Add timeout to tempOrder that expires after an hour? 
 
 TODOS:
 

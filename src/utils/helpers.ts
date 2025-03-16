@@ -4,7 +4,7 @@ import { OrderRequest, PurchaseUnit } from "@paypal/paypal-server-sdk";
 import { Item } from "@paypal/paypal-server-sdk";
 import { CheckoutPaymentIntent } from "@paypal/paypal-server-sdk";
 import mongoose, { ClientSession  } from "mongoose";
-import Basket from "../models/Basket";
+import TempOrder from "../models/TempOrder";
 
 export const processBasket = async (basket: {id: string, quantity: number}[]): Promise<ProcessedBasket> => {
   
@@ -154,23 +154,17 @@ export const validatePurchaseUnitsAgainstTempOrder = (purchaseUnit: PurchaseUnit
 const handleReservationAndBasketCleanupWithinSession = async (session: ClientSession, userId: mongoose.Types.ObjectId, tempOrder: TempOrderForValidating) => {
   try {
     // Updates the stock reservation for each of the products in the tempOrder
-    const reservationUpdates = tempOrder.items.map(item => {
-      return Product.updateOne({_id: item.product},
+    for (let item of tempOrder.items){
+      const result = await Product.updateOne({_id: item.product},
         {$inc : {reserved: - item.quantity}},
-        {session}
-      )
-    })
-
-    // Checks that all the reservation amounts recieved an update
-    const results = await Promise.all(reservationUpdates)
-    if (results.some(result => {
-      return result.modifiedCount === 0
-    })){
-      throw new Error('One or more reservation updates failed after creating an order!')
+        {session})
+        if (result.modifiedCount !== 1){
+          throw new Error('Error clearing stock reservation post order created')
+        }
     }
 
-    // Deletes all basket data associated with the user
-    await Basket.deleteMany({user: userId}).session(session)
+    // Following successful stock reservation reduction, delete the temporder document
+    await TempOrder.deleteOne({_id: tempOrder._id, user: userId})
 
   } catch (error){
     let errorMessage = 'Error handling reservation and basket cleanup: '

@@ -7,6 +7,7 @@ import Order from '../models/Order'
 import paypalController from '../utils/paypalController'
 import { processBasket, mapProcessedBasketItemsToOrderItems, validatePurchaseUnitsAgainstTempOrder, creatSessionAndHandleStockCleanup } from '../utils/helpers'
 import TempOrder from '../models/TempOrder'
+import BasketModel from '../models/Basket'
 // import paypalClient from '../utils/paypalClient'
 
 // Baseurl is /api/orders
@@ -51,19 +52,15 @@ orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedReq
 
     // Try block for performing the reservations and creating temporary order
     try {
-      const reservationOperations = processedBasket.items.map(({ quantity, product }) => {
-        return Product.updateOne(
-          {_id: product.id, stock: { $gte: quantity }},
+      for (let item of processedBasket.items){
+        const { quantity, product } = item
+        const response = await Product.updateOne({_id: product.id, stock: { $gte: quantity }},
           {$inc: {reserved: quantity, stock: - quantity}},
-          {session}
-        )
-      })
-
-      // If any of the updates to the stock did not occur, throw an error
-      const results = await Promise.all(reservationOperations)      
-      if (results.some(result => result.modifiedCount === 0)){
-        throw new Error('Not enough stock for all operation')
-      } 
+          {session})
+        if (response.modifiedCount !== 1){
+          throw new Error(`Error reserving stock for product ${product.id}`)
+        }
+      }
 
       // Creates the temp order
       const tempOrder = new TempOrder({
@@ -77,9 +74,7 @@ orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedReq
       })
 
       await tempOrder.save({session})
-      console.log('1')
       await session.commitTransaction()
-      console.log('2')
       
       // Since paypal order created an reservations made, returns the success to the paypal SDK
       res.status(httpStatusCode).json(jsonResponse)
@@ -123,6 +118,7 @@ orderRouter.post('/capture/:orderID', authenticateUser, async (req: Authenticate
     } else if (purchaseUnits.length !== 1){
       throw new Error('Purchase units had multiple elements')
     }
+    
     validatePurchaseUnitsAgainstTempOrder(purchaseUnits[0], tempOrder)
 
     // For attempting to capture the order, throws an error if failed
@@ -147,13 +143,17 @@ orderRouter.post('/capture/:orderID', authenticateUser, async (req: Authenticate
     res.status(httpStatusCode).json(jsonResponse)
     console.log('Order created and then response sent')
 
-    // Deletes the tempOrder document
-    TempOrder.deleteOne({_id: tempOrder._id})
+    // Deletes all basket data associated with the user since order created
+    BasketModel.deleteMany({user: req.user?._id})
 
     // Handles updating the stock reservation and deleting the tempOrder in a session
     // Does not throw an error, future features will add failed reservation updates to a task queue!
     const userId = (req.user as { _id: mongoose.Types.ObjectId })._id
-    creatSessionAndHandleStockCleanup(userId, tempOrder)
+    try {
+      creatSessionAndHandleStockCleanup(userId, tempOrder)
+    } catch (error){
+      console.error(' Error cleaning up basket and stock reservations ', error)
+    }
 
   } catch (error){
     let errorMessage = 'Error capturing and creating order document: '

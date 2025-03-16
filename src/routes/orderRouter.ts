@@ -8,9 +8,6 @@ import paypalController from '../utils/paypalController'
 import { processBasket, mapProcessedBasketItemsToOrderItems, validatePurchaseUnitsAgainstTempOrder, creatSessionAndHandleStockCleanup } from '../utils/helpers'
 import TempOrder from '../models/TempOrder'
 import BasketModel from '../models/Basket'
-import productRouter from './productRouter'
-// import paypalClient from '../utils/paypalClient'
-
 // Baseurl is /api/orders
 const orderRouter = express.Router()
 

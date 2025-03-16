@@ -157,7 +157,7 @@ const handleReservationAndBasketCleanupWithinSession = async (session: ClientSes
     const bulkOps = tempOrder.items.map(({ product, quantity }) => {
       return {
         updateOne: {
-          filter: {_id: product.id, reserved: {$gte: quantity}},
+          filter: {_id: product, reserved: {$gte: quantity}},
           update: {$inc: {reserved: -quantity}}
         }
       }

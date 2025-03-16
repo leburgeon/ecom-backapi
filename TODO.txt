@@ -41,5 +41,7 @@ Later
 - Implememt refresh tokens so that frontend requests a fresh access token if expired.
    - somehow do this without user knowledge
 - Implement routine that cleans up expired tempOrders that have not been handled correctly
+- Change stock reservation cleanup to non-atomic using bulkwrite. 
+ - Reservation updates that throw error are passed to task queue to be dealt with instead of whole op failing
   
 

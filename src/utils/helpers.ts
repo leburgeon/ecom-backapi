@@ -153,14 +153,22 @@ export const validatePurchaseUnitsAgainstTempOrder = (purchaseUnit: PurchaseUnit
 
 const handleReservationAndBasketCleanupWithinSession = async (session: ClientSession, userId: mongoose.Types.ObjectId, tempOrder: TempOrderForValidating) => {
   try {
-    // Updates the stock reservation for each of the products in the tempOrder
-    for (let item of tempOrder.items){
-      const result = await Product.updateOne({_id: item.product},
-        {$inc : {reserved: - item.quantity}},
-        {session})
-        if (result.modifiedCount !== 1){
-          throw new Error('Error clearing stock reservation post order created')
+    // Array of operation object for bulkWrite
+    const bulkOps = tempOrder.items.map(({ product, quantity }) => {
+      return {
+        updateOne: {
+          filter: {_id: product.id, reserved: {$gte: quantity}},
+          update: {$inc: {reserved: -quantity}}
         }
+      }
+    })
+
+    // Bulk writes updates in order, terminating at first error
+    const bulkWriteOpResult = await Product.bulkWrite(bulkOps, {session, ordered: true})
+
+    // Ensures that all the updates executed
+    if (bulkWriteOpResult.modifiedCount !== tempOrder.items.length){
+      throw new Error('Error updating reserved stock, not all updates executed')
     }
 
     // Following successful stock reservation reduction, delete the temporder document

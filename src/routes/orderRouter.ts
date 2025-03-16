@@ -8,6 +8,7 @@ import paypalController from '../utils/paypalController'
 import { processBasket, mapProcessedBasketItemsToOrderItems, validatePurchaseUnitsAgainstTempOrder, creatSessionAndHandleStockCleanup } from '../utils/helpers'
 import TempOrder from '../models/TempOrder'
 import BasketModel from '../models/Basket'
+import productRouter from './productRouter'
 // import paypalClient from '../utils/paypalClient'
 
 // Baseurl is /api/orders
@@ -49,19 +50,27 @@ orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedReq
     // Starts a session and transaction, within which to complete the stock updates and the processing order creation
     const session = await mongoose.startSession()
     session.startTransaction()
-
-    // Try block for performing the reservations and creating temporary order
+    
     try {
-      for (let item of processedBasket.items){
-        const { quantity, product } = item
-        const response = await Product.updateOne({_id: product.id, stock: { $gte: quantity }},
-          {$inc: {reserved: quantity, stock: - quantity}},
-          {session})
-        if (response.modifiedCount !== 1){
-          throw new Error(`Error reserving stock for product ${product.id}`)
+      // Try block for performing the reservations and creating temporary order
+      const bulkOps = processedBasket.items.map(({ product, quantity }) => {
+        return {
+          updateOne: {
+            filter: {_id : product.id, stock: {$gte: quantity}},
+            update: {$inc: {stock: -quantity, reserved: quantity}}
+          }
         }
-      }
+      })
 
+      // Bulk writes the operations to mongodb within the transaction
+      // ordered=true option inducates that the updates will operate in order, all terminate on the first error
+      const bulkWriteOpResult = await Product.bulkWrite(bulkOps, {session: session, ordered: true})
+
+      // Checks that all the updates occured before creating the temporder
+      if (bulkWriteOpResult.modifiedCount !== processedBasket.items.length){
+        throw new Error('Error reserving stock, not enough stock!')
+      }
+      
       // Creates the temp order
       const tempOrder = new TempOrder({
         user: req.user?._id,

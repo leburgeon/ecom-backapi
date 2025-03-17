@@ -47,7 +47,6 @@ const captureOrder = async (orderId: string) => {
 
   try {
     const {body, ...httpResponse} = await ordersController.ordersCapture(collect)
-    console.log('Captured! In paypalController.captureOrder')
     return {
       jsonResponse: JSON.parse(body.toString()),
       httpStatusCode: httpResponse.statusCode

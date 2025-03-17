@@ -147,10 +147,9 @@ orderRouter.post('/capture/:orderID', authenticateUser, async (req: Authenticate
 
     // Returns the response to the client since payment captured and order created
     res.status(httpStatusCode).json(jsonResponse)
-    console.log('Order created and then response sent')
 
     // Deletes all basket data associated with the user since order created
-    BasketModel.deleteMany({user: req.user?._id})
+    await BasketModel.deleteMany({user: req.user?._id.toString()})
 
     // Handles updating the stock reservation and deleting the tempOrder in a session
     // Does not throw an error, future features will add failed reservation updates to a task queue!

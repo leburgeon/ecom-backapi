@@ -145,7 +145,6 @@ export const validatePurchaseUnitsAgainstTempOrder = (purchaseUnit: PurchaseUnit
       throw new Error('Could not find a matching id for one of the items in temporder, arrays did not match')
     }
     if (ofPurchaseUnit.name !== item.name || ofPurchaseUnit.price !== item.price || ofPurchaseUnit.quantity !== item.quantity){
-      console.log(ofPurchaseUnit.name, item.name, ofPurchaseUnit.price, item.price, ofPurchaseUnit.quantity, item.quantity)
       throw new Error('Some information of the items did not match (name?/price?/quantity?/')
     }
   }

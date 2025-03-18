@@ -55,6 +55,16 @@ const orderSchema = new mongoose.Schema({
     postalCode: String,
     country: String
   }
-},{timestamps: true})
+},{timestamps: true,
+  toJSON: {
+    transform(_doc, ret) {
+      ret.id = ret._id
+      delete ret._id
+      delete ret.shippingAddress
+      delete ret.payment
+      delete ret.__v
+    }
+  }
+})
 
 export default mongoose.model('Order', orderSchema)

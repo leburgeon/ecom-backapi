@@ -191,8 +191,12 @@ orderRouter.post('/release/:orderID', authenticateUser, async (req: Authenticate
 })
 
 // Route for retrieving a list of the users orders
-orderRouter.get('', authenticateUser, async (_req: AuthenticatedRequest, res: Response) => {
-  res.status(200).json(['order1', 'order2'])
+orderRouter.get('', authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?._id.toString()
+
+  const usersOrders = await Order.find({user: userId})
+
+  res.status(200).json(usersOrders)
 })
 
 export default orderRouter

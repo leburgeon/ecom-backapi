@@ -5,6 +5,7 @@ import { Item } from "@paypal/paypal-server-sdk";
 import { CheckoutPaymentIntent } from "@paypal/paypal-server-sdk";
 import mongoose, { ClientSession  } from "mongoose";
 import TempOrder from "../models/TempOrder";
+import Order from "../models/Order";
 
 export const processBasket = async (basket: {id: string, quantity: number}[]): Promise<ProcessedBasket> => {
   
@@ -244,4 +245,24 @@ export const createSessionAndReleaseStock = async (tempOrderToRemove: TempOrderF
   } finally {
     await session.endSession()
   }
+}
+
+// Generates a unique order number, using the current date and a hex string. 
+// Checks that the id is unique on the database and recursively generates until a new one is found 
+export const generateOrderNumber = async (): Promise<string> => {
+  const datePart = new Date().toISOString().split("T")[0].replace(/-/g, ""); // YYYYMMDD
+  const randomValues = new Uint8Array(3)
+  crypto.getRandomValues(randomValues)
+  const hexString = [...randomValues].map(byte => byte.toString(16).padStart(2, '0')).join('')
+
+  const orderNumber = `ORD-${datePart}-${hexString}`
+
+  // Ensures uniqueness
+  const existing = await Order.findOne({orderNumber})
+
+  if (existing){
+    return generateOrderNumber()
+  }
+
+  return orderNumber
 }

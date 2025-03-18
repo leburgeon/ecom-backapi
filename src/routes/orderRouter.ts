@@ -5,7 +5,7 @@ import Product from '../models/Product'
 import mongoose from 'mongoose'
 import Order from '../models/Order'
 import paypalController from '../utils/paypalController'
-import { processBasket, mapProcessedBasketItemsToOrderItems, validatePurchaseUnitsAgainstTempOrder, creatSessionAndHandleStockCleanup, createSessionAndReleaseStock } from '../utils/helpers'
+import { processBasket, mapProcessedBasketItemsToOrderItems, validatePurchaseUnitsAgainstTempOrder, creatSessionAndHandleStockCleanup, createSessionAndReleaseStock, generateOrderNumber } from '../utils/helpers'
 import TempOrder from '../models/TempOrder'
 import BasketModel from '../models/Basket'
 // Baseurl is /api/orders
@@ -131,11 +131,15 @@ orderRouter.post('/capture/:orderID', authenticateUser, async (req: Authenticate
     const { jsonResponse, httpStatusCode } = await paypalController.captureOrder(orderID)
     const {status: paypalOrderStatus, id: paypalOrderId} = jsonResponse
 
+    // Generates a user friendly order number
+    const orderNumber = await generateOrderNumber()
+
     // Creates new order
     const newOrder = new Order({
       user: req.user?._id,
       items: tempOrder.items,
       totalCost: tempOrder.totalCost,
+      orderNumber,
       status: 'PAID',
       payment: {
         method: 'PAYPAL',
@@ -146,7 +150,7 @@ orderRouter.post('/capture/:orderID', authenticateUser, async (req: Authenticate
     await newOrder.save()
 
     // Returns the response to the client since payment captured and order created
-    res.status(httpStatusCode).json(jsonResponse)
+    res.status(httpStatusCode).json({...jsonResponse, orderNumber})
 
     // Deletes all basket data associated with the user since order created
     await BasketModel.deleteMany({user: req.user?._id.toString()})

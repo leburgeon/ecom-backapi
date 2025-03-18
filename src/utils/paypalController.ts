@@ -1,4 +1,4 @@
-import  {Environment, Client, ApiError, OrdersController, Order} from '@paypal/paypal-server-sdk'
+import  {Environment, Client, ApiError, OrdersController, Order, ApiResponse} from '@paypal/paypal-server-sdk'
 import config from './config'
 import { ProcessedBasket } from '../types'
 import { mapProcessedBasketItemsToPurchaseUnitItems } from './helpers'
@@ -46,7 +46,8 @@ const captureOrder = async (orderId: string) => {
   }
 
   try {
-    const {body, ...httpResponse} = await ordersController.ordersCapture(collect)
+    const order: ApiResponse<Order> = await ordersController.ordersCapture(collect)
+    const {body, ...httpResponse} = order
     return {
       jsonResponse: JSON.parse(body.toString()),
       httpStatusCode: httpResponse.statusCode

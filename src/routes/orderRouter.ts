@@ -5,7 +5,7 @@ import Product from '../models/Product'
 import mongoose from 'mongoose'
 import Order from '../models/Order'
 import paypalController from '../utils/paypalController'
-import { processBasket, mapProcessedBasketItemsToOrderItems, validatePurchaseUnitsAgainstTempOrder, creatSessionAndHandleStockCleanup } from '../utils/helpers'
+import { processBasket, mapProcessedBasketItemsToOrderItems, validatePurchaseUnitsAgainstTempOrder, creatSessionAndHandleStockCleanup, createSessionAndReleaseStock } from '../utils/helpers'
 import TempOrder from '../models/TempOrder'
 import BasketModel from '../models/Basket'
 // Baseurl is /api/orders
@@ -170,6 +170,21 @@ orderRouter.post('/capture/:orderID', authenticateUser, async (req: Authenticate
   }
 })
 
+
+// Route for releasing reserved stock from a tempOrder after a paypal payment error
+orderRouter.post('/release/:orderID', authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
+  const { orderID } = req.params
+
+  // Finds the tempOrder
+  const tempOrderToRemove = await TempOrder.findOne({paymentTransactionId: orderID})
+  // If the tempOrder still exists, then call the stock release handler
+  if (tempOrderToRemove){
+    createSessionAndReleaseStock(tempOrderToRemove)
+  } 
+
+  // Indicate that the tempOrder removed and the stock released
+  res.status(201).json({data: 'TempOrder removal handled'})
+})
 
 // Route for retrieving a list of the users orders
 orderRouter.get('', authenticateUser, async (_req: AuthenticatedRequest, res: Response) => {

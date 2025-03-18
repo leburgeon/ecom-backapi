@@ -202,3 +202,46 @@ export const creatSessionAndHandleStockCleanup = async (userId: mongoose.Types.O
     console.error(error)
   }
 }
+
+export const createSessionAndReleaseStock = async (tempOrderToRemove: TempOrderForValidating) => {
+  // Starts the transaction for deleting the temp order and releasing the stock
+  const session = await mongoose.startSession()
+  session.startTransaction()
+
+  try {
+    // Array of bulk operations for releasing the reserved stock of the products
+    const bulkOps = tempOrderToRemove.items.map(item => {
+      return {
+        updateOne: {
+          filter: {_id: item.product, reserved: {$gte: item.quantity}},
+          update: {$inc: {stock: item.quantity, reserved: -item.quantity}}
+        }
+      }
+    })
+
+    // Deletes the tempOrder document
+    const result = await TempOrder.deleteOne({_id: tempOrderToRemove._id}).session(session)
+
+    // If it was already deleted, abort the transaction, nothing to do
+    if (result.deletedCount !== 1){
+      throw new Error('Temp order already deleted')
+    }
+
+    // Attempts to release the stock 
+    const bulkWriteOpResult = await Product.bulkWrite(bulkOps, {session, ordered: true})
+    if (bulkWriteOpResult.modifiedCount !== tempOrderToRemove.items.length){
+      throw new Error('Stock not released successfully for every product')
+    }
+
+    await session.commitTransaction()
+  } catch (error){
+    await session.abortTransaction()
+    let errorMessage = 'Error releasing reserved stock data: '
+    if (error instanceof Error){
+      errorMessage += error.message
+    }
+    console.error(errorMessage, error)
+  } finally {
+    await session.endSession()
+  }
+}

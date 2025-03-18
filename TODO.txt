@@ -7,6 +7,7 @@ FRONTEND:
 - The checkout route should validate the stock, and return the amount that needs to be reduced in basket if not enough
 - When a stock error is returned from the createOrder route, the frontend should re-call checkout and update the stock in the basket
 - Add same add to basket timeout as in basket on product page
+- create order success page
   
 
 BACKEND:

@@ -234,7 +234,7 @@ const validateBasketAndPopulate = (basket) => __awaiter(void 0, void 0, void 0, 
             throw new Errors_1.StockError('Product not found', item.id);
         }
         if (product.stock < item.quantity) {
-            throw new Errors_1.StockError('Out of stock', item.id);
+            throw new Errors_1.StockError('Out of stock', item.id, item.quantity - product.stock);
         }
         return { quantity: item.quantity,
             product,
@@ -255,7 +255,7 @@ const validateBasketAndPopulate = (basket) => __awaiter(void 0, void 0, void 0, 
             const error = result.reason;
             if (error instanceof Errors_1.StockError) {
                 if (error.message === 'Out of stock') {
-                    missingStock.outOfStock.push(error.id);
+                    missingStock.outOfStock.push({ id: error.id, quantity: error.quantity });
                 }
                 else if (error.message === 'Product not found') {
                     missingStock.notFound.push(error.id);

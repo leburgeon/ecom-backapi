@@ -192,7 +192,7 @@ const validateBasketAndPopulate = async (basket: Basket): Promise<ValidatedAndPo
       throw new StockError('Product not found', item.id)
     }
     if (product.stock < item.quantity){
-      throw new StockError('Out of stock', item.id)
+      throw new StockError('Out of stock', item.id, product.stock)
     }
     return {quantity: item.quantity,
       product,
@@ -217,7 +217,7 @@ const validateBasketAndPopulate = async (basket: Basket): Promise<ValidatedAndPo
       const error = result.reason
       if (error instanceof StockError){
         if (error.message === 'Out of stock'){
-          missingStock.outOfStock.push(error.id) 
+          missingStock.outOfStock.push({id: error.id, quantity: error.quantity}) 
         } else if (error.message === 'Product not found'){
           missingStock.notFound.push(error.id)
         }
@@ -245,7 +245,7 @@ export const validateBasketStock = async (req: Request, res: Response, next: Nex
           })
         } else if (missingStock.outOfStock.length > 0){
           res.status(400).json({error: 'Some products out of stock',
-            ids: missingStock.outOfStock
+            items: missingStock.outOfStock
           })
         } else {
           req.body = populatedItems

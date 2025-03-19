@@ -64,8 +64,8 @@ const captureOrder = (orderId) => __awaiter(void 0, void 0, void 0, function* ()
         prefer: "return=minimal"
     };
     try {
-        const _a = yield ordersController.ordersCapture(collect), { body } = _a, httpResponse = __rest(_a, ["body"]);
-        console.log('Captured! In paypalController.captureOrder');
+        const order = yield ordersController.ordersCapture(collect);
+        const { body } = order, httpResponse = __rest(order, ["body"]);
         return {
             jsonResponse: JSON.parse(body.toString()),
             httpStatusCode: httpResponse.statusCode

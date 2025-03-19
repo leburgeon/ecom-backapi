@@ -85,7 +85,7 @@ export type ProcessedBasket = {
 
 export type ValidatedAndPopulatedBasketResult = {
   missingStock: {notFound: ObjectId[],
-    outOfStock: ObjectId[]
+    outOfStock: {id: ObjectId, quantity: number}[]
   },
   populatedItems: PopulatedBasket
 }

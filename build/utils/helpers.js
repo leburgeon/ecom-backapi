@@ -12,11 +12,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.creatSessionAndHandleStockCleanup = exports.validatePurchaseUnitsAgainstTempOrder = exports.mapProcessedBasketItemsToPurchaseUnitItems = exports.mapProcessedBasketItemsToOrderItems = exports.processBasket = void 0;
+exports.generateOrderNumber = exports.createSessionAndReleaseStock = exports.creatSessionAndHandleStockCleanup = exports.validatePurchaseUnitsAgainstTempOrder = exports.mapProcessedBasketItemsToPurchaseUnitItems = exports.mapProcessedBasketItemsToOrderItems = exports.processBasket = void 0;
 const Product_1 = __importDefault(require("../models/Product"));
 const paypal_server_sdk_1 = require("@paypal/paypal-server-sdk");
 const mongoose_1 = __importDefault(require("mongoose"));
-const Basket_1 = __importDefault(require("../models/Basket"));
+const TempOrder_1 = __importDefault(require("../models/TempOrder"));
+const Order_1 = __importDefault(require("../models/Order"));
 const processBasket = (basket) => __awaiter(void 0, void 0, void 0, function* () {
     // If the basket is empty, returns error
     if (basket.length === 0) {
@@ -144,7 +145,6 @@ const validatePurchaseUnitsAgainstTempOrder = (purchaseUnit, tempOrder) => {
             throw new Error('Could not find a matching id for one of the items in temporder, arrays did not match');
         }
         if (ofPurchaseUnit.name !== item.name || ofPurchaseUnit.price !== item.price || ofPurchaseUnit.quantity !== item.quantity) {
-            console.log(ofPurchaseUnit.name, item.name, ofPurchaseUnit.price, item.price, ofPurchaseUnit.quantity, item.quantity);
             throw new Error('Some information of the items did not match (name?/price?/quantity?/');
         }
     }
@@ -152,19 +152,23 @@ const validatePurchaseUnitsAgainstTempOrder = (purchaseUnit, tempOrder) => {
 exports.validatePurchaseUnitsAgainstTempOrder = validatePurchaseUnitsAgainstTempOrder;
 const handleReservationAndBasketCleanupWithinSession = (session, userId, tempOrder) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        // Updates the stock reservation for each of the products in the tempOrder
-        const reservationUpdates = tempOrder.items.map(item => {
-            return Product_1.default.updateOne({ _id: item.product }, { $inc: { reserved: -item.quantity } }, { session });
+        // Array of operation object for bulkWrite
+        const bulkOps = tempOrder.items.map(({ product, quantity }) => {
+            return {
+                updateOne: {
+                    filter: { _id: product, reserved: { $gte: quantity } },
+                    update: { $inc: { reserved: -quantity } }
+                }
+            };
         });
-        // Checks that all the reservation amounts recieved an update
-        const results = yield Promise.all(reservationUpdates);
-        if (results.some(result => {
-            return result.modifiedCount === 0;
-        })) {
-            throw new Error('One or more reservation updates failed after creating an order!');
+        // Bulk writes updates in order, terminating at first error
+        const bulkWriteOpResult = yield Product_1.default.bulkWrite(bulkOps, { session, ordered: true });
+        // Ensures that all the updates executed
+        if (bulkWriteOpResult.modifiedCount !== tempOrder.items.length) {
+            throw new Error('Error updating reserved stock, not all updates executed');
         }
-        // Deletes all basket data associated with the user
-        yield Basket_1.default.deleteMany({ user: userId }).session(session);
+        // Following successful stock reservation reduction, delete the temporder document
+        yield TempOrder_1.default.deleteOne({ _id: tempOrder._id, user: userId });
     }
     catch (error) {
         let errorMessage = 'Error handling reservation and basket cleanup: ';
@@ -180,7 +184,7 @@ const creatSessionAndHandleStockCleanup = (userId, tempOrder) => __awaiter(void 
         const session = yield mongoose_1.default.startSession();
         session.startTransaction();
         try {
-            handleReservationAndBasketCleanupWithinSession(session, userId, tempOrder);
+            yield handleReservationAndBasketCleanupWithinSession(session, userId, tempOrder);
             yield session.commitTransaction();
         }
         catch (error) {
@@ -198,3 +202,59 @@ const creatSessionAndHandleStockCleanup = (userId, tempOrder) => __awaiter(void 
     }
 });
 exports.creatSessionAndHandleStockCleanup = creatSessionAndHandleStockCleanup;
+const createSessionAndReleaseStock = (tempOrderToRemove) => __awaiter(void 0, void 0, void 0, function* () {
+    // Starts the transaction for deleting the temp order and releasing the stock
+    const session = yield mongoose_1.default.startSession();
+    session.startTransaction();
+    try {
+        // Array of bulk operations for releasing the reserved stock of the products
+        const bulkOps = tempOrderToRemove.items.map(item => {
+            return {
+                updateOne: {
+                    filter: { _id: item.product, reserved: { $gte: item.quantity } },
+                    update: { $inc: { stock: item.quantity, reserved: -item.quantity } }
+                }
+            };
+        });
+        // Deletes the tempOrder document
+        const result = yield TempOrder_1.default.deleteOne({ _id: tempOrderToRemove._id }).session(session);
+        // If it was already deleted, abort the transaction, nothing to do
+        if (result.deletedCount !== 1) {
+            throw new Error('Temp order already deleted');
+        }
+        // Attempts to release the stock 
+        const bulkWriteOpResult = yield Product_1.default.bulkWrite(bulkOps, { session, ordered: true });
+        if (bulkWriteOpResult.modifiedCount !== tempOrderToRemove.items.length) {
+            throw new Error('Stock not released successfully for every product');
+        }
+        yield session.commitTransaction();
+    }
+    catch (error) {
+        yield session.abortTransaction();
+        let errorMessage = 'Error releasing reserved stock data: ';
+        if (error instanceof Error) {
+            errorMessage += error.message;
+        }
+        console.error(errorMessage, error);
+    }
+    finally {
+        yield session.endSession();
+    }
+});
+exports.createSessionAndReleaseStock = createSessionAndReleaseStock;
+// Generates a unique order number, using the current date and a hex string. 
+// Checks that the id is unique on the database and recursively generates until a new one is found 
+const generateOrderNumber = () => __awaiter(void 0, void 0, void 0, function* () {
+    const datePart = new Date().toISOString().split("T")[0].replace(/-/g, ""); // YYYYMMDD
+    const randomValues = new Uint8Array(3);
+    crypto.getRandomValues(randomValues);
+    const hexString = [...randomValues].map(byte => byte.toString(16).padStart(2, '0')).join('');
+    const orderNumber = `ORD-${datePart}-${hexString}`;
+    // Ensures uniqueness
+    const existing = yield Order_1.default.findOne({ orderNumber });
+    if (existing) {
+        return (0, exports.generateOrderNumber)();
+    }
+    return orderNumber;
+});
+exports.generateOrderNumber = generateOrderNumber;

@@ -10,8 +10,10 @@ const basketRouter = express.Router()
 // Route for getting the populated basket information of the user
 basketRouter.get('', authenticateUser, async (req: AuthenticatedRequest, res: Response, next: NextFunction)=> {
   try {
+    // Populates the items array on the basket
     const userBasket = await Basket.findOne({user: req.user?._id}).populate('products.productId', 'name price stock firstImage')
     const productsArray = userBasket?.products.map(product => {
+      // The product id field is now a populated mongoose document
       return {
         product: product.productId,
         quantity: product.quantity

@@ -244,6 +244,7 @@ export const validateBasketStock = async (req: Request, res: Response, next: Nex
             ids: missingStock.notFound
           })
         } else if (missingStock.outOfStock.length > 0){
+          // Returns the array of ids and the quantity to reduce, to make the basket stock-valid
           res.status(400).json({error: 'Some products out of stock',
             items: missingStock.outOfStock
           })

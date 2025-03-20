@@ -6,6 +6,7 @@ FRONTEND:
 - make items in basket a link to their product page
 - clean up product search page
 - fix the image display of products in product page
+- make basket count always updated
   
 
 BACKEND:

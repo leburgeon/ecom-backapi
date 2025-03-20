@@ -266,3 +266,4 @@ export const generateOrderNumber = async (): Promise<string> => {
 
   return orderNumber
 }
+

@@ -1,19 +1,14 @@
 FRONTEND: 
 - Paypal integration: 
-  - TODO: Create a successful payment page with order refresh
-  - Create a payment failed operation, or return to basket with payment failed message
-  - Integrate checkout option to call the checkout route and then take the user to the checkout page
-- Add an available stock field to the items in the basket so that stock can be validated
-- The checkout route should validate the stock, and return the amount that needs to be reduced in basket if not enough
-- When a stock error is returned from the createOrder route, the frontend should re-call checkout and update the stock in the basket
 - Add same add to basket timeout as in basket on product page
-- create order success page
 - Login should go back a page if remains on the same page
 -logout button clears all data (basket)
+- make items in basket a link to their product page
+- clean up product search page
+- fix the image display of products in product page
   
 
 BACKEND:
-  - Change checkout route to not only validate the stock and the product ids, but send back the quantity of the stock that is missing so that the information can be used frontend
   - Add timeout to tempOrder that expires after an hour? 
   - Figure way of storing images more cleanly
    - file uploads through express?

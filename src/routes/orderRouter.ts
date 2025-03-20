@@ -54,7 +54,7 @@ orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedReq
         return {
           updateOne: {
             filter: {_id : product.id, stock: {$gte: quantity}},
-            update: {$inc: {stock: -quantity, reserved: quantity}}
+            update: {$inc: {stock: - quantity, reserved: quantity}}
           }
         }
       })

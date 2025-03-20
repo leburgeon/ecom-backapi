@@ -26,6 +26,7 @@ basketRouter.get('', authenticateUser, async (req: AuthenticatedRequest, res: Re
   }
 })
 
+// Router for adding stock to the basket - should check if there is enough to make the change 
 basketRouter.post('/add', authenticateUser, parseProductToBasket, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   const userDoc = req.user
   const productToAddId = req.body.productId

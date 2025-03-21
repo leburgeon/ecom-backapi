@@ -55,6 +55,8 @@ basketRouter.post('/increment', authenticateUser, parseProductToBasket, async (r
     //  Initialise a variable for storing the desired quantity
     let desiredQuantity : number | undefined = undefined
 
+    
+
     // If the product is already in the basket, set the desired quantity using the existing amount and the increment
     userBasket.products.forEach(product => {
       if (product.productId.toString() === id){
@@ -73,15 +75,22 @@ basketRouter.post('/increment', authenticateUser, parseProductToBasket, async (r
       if (desiredQuantity < 1){
         // If it is, filter the product from the basket
         userBasket.set('products', userBasket.products.filter(p => p.productId.toString() !== productToIncrement._id.toString()))
-        // Else, check if the new value is valid
+        // Else
       } else {
-        // If it is, update the value
+        // Check if the new value is valid
         if (desiredQuantity <= productToIncrement.stock){
-          userBasket.products.forEach(product => {
+          // If it is valid, update the quantitiy on the basket item if it exists
+          const wasThere = userBasket.products.some(product => {
             if (product.productId.toString() === productToIncrement._id.toString()){
               product.quantity = desiredQuantity as number
+              return true
             }
+            return false
           })
+          // If it was not there already, add new item to the basket
+          if (!wasThere){
+            userBasket.products.push({productId: productToIncrement._id, quantity: desiredQuantity})
+          }
         } else {
           // Else, throw an error, with the id and the stock quantity
           throw new StockError('Not enough stock', id, productToIncrement.stock)
@@ -90,6 +99,7 @@ basketRouter.post('/increment', authenticateUser, parseProductToBasket, async (r
 
       // Save the updated basket
       await userBasket.save()
+      
       // Responds with the number of unique items in the basket
       res.status(200).json({basketCount: userBasket.products.length, inBasket: desiredQuantity})
 

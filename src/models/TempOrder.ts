@@ -41,6 +41,10 @@ const tempOrderSchema = new mongoose.Schema({
     type: totalCostSchema,
     required: true
   },
+  expiresAt: {
+    type: Date,
+    required: true
+  },
   paymentTransactionId: String
 }, {timestamps: true})
 

@@ -68,6 +68,9 @@ orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedReq
         throw new Error('Error reserving stock, not enough stock!')
       }
       
+      // Creates the time to expire the temporder and release the stock 
+      const expiresAt = new Date(Date.now())
+
       // Creates the temp order
       const tempOrder = new TempOrder({
         user: req.user?._id,
@@ -76,14 +79,15 @@ orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedReq
           currencyCode: 'GBP',
           value: processedBasket.totalCost
         },
-        paymentTransactionId: paypalOrderId
+        paymentTransactionId: paypalOrderId,
+        expiresAt  // Creates an expiry for 15 minutes time
       })
 
       await tempOrder.save({session})
       await session.commitTransaction()
       
       // Since paypal order created an reservations made, returns the success to the paypal SDK
-      res.status(httpStatusCode).json(jsonResponse)
+      res.status(httpStatusCode).json({...jsonResponse, expiresAt})
 
     } catch (error){
       await session.abortTransaction()

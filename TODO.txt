@@ -1,12 +1,16 @@
 FRONTEND:
-- clean up product search page
-- fix the image display of products in product page
-- make basket count always updated
-- Implememt item searching 
-  
+
 
 BACKEND:
+  - Fix the stock reducing route so that reducing stock always works, even if greater than stock amount
   - Add timeout to tempOrder that expires after an hour? 
+    - use node-cron to schedule a cleanup every 5 minutes.
+      - download node-cron 
+
+    - think of how to handle failed releases
+    - Use transactions to release stock to ensure that tempOrder not released and order createOrder
+  - condider how payments may need to be released or refunded
+    
   - Figure way of storing images more cleanly
    - file uploads through express?
    - plug images into orders and checkout?
@@ -14,13 +18,7 @@ BACKEND:
 TODOS:
 
 - Simple stock validation for checkout
-  - Check that there is enough stock for items when user attempts to checkout
-  - Checkout consists of just a get call to checkout route, where confirmation info is returned before proceeding
-  - If there is not enough stock, return error to frontend
-   - Decide: should frontend remove from basket? 
-   - Should there be known 'out of stock' flag on items in basket in frontend?
 - Implement the soft reservation system
-  - Info notification in case adding to basket does not succeed, and change to the stock level of product in FE
   - Warning for low stock items, and message that stock will be reserved for x minutes
   - Decide: How to manage stock reservations for multiple items?
   - Updated route for adding to basket, that creates reservations when ls

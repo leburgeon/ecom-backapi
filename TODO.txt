@@ -1,12 +1,8 @@
-FRONTEND: 
-- Paypal integration: 
-- Add same add to basket timeout as in basket on product page
-- Login should go back a page if remains on the same page
--logout button clears all data (basket)
-- make items in basket a link to their product page
+FRONTEND:
 - clean up product search page
 - fix the image display of products in product page
 - make basket count always updated
+- Implememt item searching 
   
 
 BACKEND:

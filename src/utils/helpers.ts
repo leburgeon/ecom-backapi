@@ -61,6 +61,9 @@ export const processBasket = async (basket: {id: string, quantity: number}[]): P
     }
   })
 
+  // Handles floating point precision conversion
+  processedBasket.totalCost = parseFloat(processedBasket.totalCost.toFixed(2))
+
   return processedBasket
 }
 
@@ -266,3 +269,4 @@ export const generateOrderNumber = async (): Promise<string> => {
 
   return orderNumber
 }
+

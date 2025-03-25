@@ -77,8 +77,8 @@ basketRouter.post('/increment', authenticateUser, parseProductToBasket, async (r
         userBasket.set('products', userBasket.products.filter(p => p.productId.toString() !== productToIncrement._id.toString()))
         // Else
       } else {
-        // Check if the new value is valid
-        if (desiredQuantity <= productToIncrement.stock){
+        // Check if the new value is valid (there is enough stock to potentially fulfill the order, or the increment was negative)
+        if (desiredQuantity <= productToIncrement.stock || quantity < 0){
           // If it is valid, update the quantitiy on the basket item if it exists
           const wasThere = userBasket.products.some(product => {
             if (product.productId.toString() === productToIncrement._id.toString()){
@@ -101,7 +101,9 @@ basketRouter.post('/increment', authenticateUser, parseProductToBasket, async (r
       await userBasket.save()
       
       // Responds with the number of unique items in the basket
-      res.status(200).json({basketCount: userBasket.products.length, inBasket: desiredQuantity})
+      res.status(200).json({basketCount: userBasket.products.length, 
+        inBasket: desiredQuantity,
+        items: new Array({id: productToIncrement._id.toString(), quantity: productToIncrement.stock})})
 
     } catch (error){
       // If stock error, return id and latest stock of the violating product

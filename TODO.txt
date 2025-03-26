@@ -2,13 +2,7 @@ FRONTEND:
 
 
 BACKEND:
-  - Fix the stock reducing route so that reducing stock always works, even if greater than stock amount
-  - Add timeout to tempOrder that expires after an hour? 
-    - use node-cron to schedule a cleanup every 5 minutes.
-      - download node-cron 
 
-    - think of how to handle failed releases
-    - Use transactions to release stock to ensure that tempOrder not released and order createOrder
   - condider how payments may need to be released or refunded
     
   - Figure way of storing images more cleanly
@@ -17,7 +11,6 @@ BACKEND:
 
 TODOS:
 
-- Simple stock validation for checkout
 - Implement the soft reservation system
   - Warning for low stock items, and message that stock will be reserved for x minutes
   - Decide: How to manage stock reservations for multiple items?

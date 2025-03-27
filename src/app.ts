@@ -5,6 +5,7 @@ import loginRouter from './routes/loginRouter'
 import productRouter from './routes/productRouter'
 import orderRouter from './routes/orderRouter'
 import basketRouter from './routes/basketRouter'
+import testRouter from './routes/testRouter'
 import cors from 'cors'
 
 const app = express()
@@ -26,6 +27,8 @@ app.use('/api/products', productRouter)
 app.use('/api/orders', orderRouter)
 
 app.use('/api/basket', basketRouter)
+
+app.use('/api/test', testRouter)
 
 app.use((_req, res) => {
   res.status(400).json({error: 'Uknown endpoint'})

@@ -4,6 +4,7 @@ import { NewProduct, RequestWithSearchFilters } from '../types'
 import Product from '../models/Product'
 import Description from '../models/Description'
 import mongoose from 'mongoose'
+import multer from 'multer'
 
 const productRouter = express.Router()
 
@@ -72,7 +73,7 @@ productRouter.delete('/:id', authenticateAdmin, async (req: Request, res: Respon
 })
 
 // Route for adding a new product document
-productRouter.post('', authenticateAdmin, parseNewProduct, async (req: Request<unknown, unknown, NewProduct>, res: Response, next: NextFunction) => {
+productRouter.post('', authenticateAdmin, mul, async (req: Request<unknown, unknown, NewProduct>, res: Response, next: NextFunction) => {
   const { name, categories, price, description} = req.body
 
   try {

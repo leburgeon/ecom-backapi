@@ -48,7 +48,7 @@ userRouter.post('/admin', authenticateAdmin, parseNewUser, async (req: Request<u
 
 // Simple route for authenticating an admin user
 userRouter.get('/admin', authenticateAdmin, (_req: Request, res: Response, _next: NextFunction) => {
-  res.status(200)
+  res.status(200).json({data: 'is admin'})
 })
 
 // Route for deleting a user

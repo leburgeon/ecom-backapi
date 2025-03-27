@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express"
-import {  NewOrderSchema, JwtUserPayloadSchema, LoginCredentialsSchema, NewProductSchema, NewUserSchema, PaginationDetailsSchema, BasketSchema } from "./validators"
+import {  NewOrderSchema, JwtUserPayloadSchema, LoginCredentialsSchema,  NewUserSchema, PaginationDetailsSchema, BasketSchema } from "./validators"
 import mongoose from "mongoose"
 import { ZodError } from "zod"
 import jwt, { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
@@ -9,6 +9,7 @@ import { AuthenticatedRequest, Basket, RequestWithSearchFilters, ValidatedAndPop
 import { z } from 'zod'
 import Product from "../models/Product"
 import { StockError } from "./Errors"
+import multer from "multer"
 
 // Middlewear for parsing the new request and ensuring that the request has fiels for page limit and page number 
 
@@ -83,13 +84,15 @@ export const parseNewUser = (req: Request, _res: Response, next: NextFunction) =
 }
 
 // Middlewear for parsing the request body for the fields required for a new product
-export const parseNewProduct = (req: Request, _res: Response, next: NextFunction) => {
-  try {
-    NewProductSchema.parse(req.body)
-    next()
-  } catch (error: unknown) {
-    next(error)
-  }
+export const parseNewProduct = (req: Request, _res: Response, _next: NextFunction) => {
+  console.log('#################################')
+  console.log(req.body)
+  // try {
+  //   NewProductSchema.parse(req.body)
+  //   next()
+  // } catch (error: unknown) {
+  //   next(error)
+  // }
 }
 
 // For parsing the request body for the login credentials
@@ -254,6 +257,9 @@ export const validateBasketStock = async (req: Request, res: Response, next: Nex
         }
     }
 }
+
+// Middlewear for parsing file data for a new product upload 
+const 
 
 export const requestLogger = (req: Request, _res: Response, next: NextFunction) => {
   const method = req.method

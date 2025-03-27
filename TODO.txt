@@ -1,13 +1,10 @@
-FRONTEND:
-
-
-BACKEND:
-
-  - condider how payments may need to be released or refunded
-    
-  - Figure way of storing images more cleanly
-   - file uploads through express?
-   - plug images into orders and checkout?
+- Integrating the cloudfront cdn:
+  - Create the fe page for creating a new order 
+    - User must be admin authenticated to view to product adding page
+    - Must include: all the fields for the product including name and description.
+  - Create the route for adding a new product
+    - Handle adding the product images to the bucket
+    - Save the product document to mongoDB with the image url
 
 TODOS:
 
@@ -20,6 +17,7 @@ TODOS:
  
 
 Later
+- Add support for multiple images
 - Add database sharding for category
 - Add an index for user of orders
 - Add an index for user id of baskets

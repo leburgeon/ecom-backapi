@@ -1,10 +1,9 @@
 import express, {NextFunction, Response, Request} from 'express'
 import { authenticateAdmin,  parseNewProduct, parsePagination, parseFilters } from '../utils/middlewear'
-import { NewProduct, RequestWithSearchFilters } from '../types'
+import { NewProduct, ProductImages, RequestWithSearchFilters } from '../types'
 import Product from '../models/Product'
 import Description from '../models/Description'
-import mongoose from 'mongoose'
-import multer from 'multer'
+import { multerProductParser } from '../utils/middlewear'
 
 const productRouter = express.Router()
 
@@ -48,7 +47,6 @@ productRouter.get('/:id', async (req: Request, res: Response, next: NextFunction
   try {
     const productToReturn = await Product.findById(id)
     if (!productToReturn) {
-      
       res.status(404).json('Product not found')
     } else {
       await productToReturn.populate('description')
@@ -73,33 +71,20 @@ productRouter.delete('/:id', authenticateAdmin, async (req: Request, res: Respon
 })
 
 // Route for adding a new product document
-productRouter.post('', authenticateAdmin, mul, async (req: Request<unknown, unknown, NewProduct>, res: Response, next: NextFunction) => {
-  const { name, categories, price, description} = req.body
+productRouter.post('', authenticateAdmin, multerProductParser, parseNewProduct, async (req: Request<unknown, unknown, NewProduct>, _res: Response, _next: NextFunction) => {
+  const {firstImage, gallery} = (req.files as unknown) as ProductImages
 
-  try {
-    // First creates the new product document
-    const newProduct = new Product({name, categories, price})
+  const {name, price, stock, description, seller} = req.body
+  let {categories} = req.body
 
-    // Then the new description is added for the product
-    // Product field is the id of the new product document
-    const newProdcutDescription = new Description({
-      content: description,
-      product: newProduct._id
-    })
-
-    // Description saved
-    await newProdcutDescription.save()
-
-    // Description field of the new product as the new description document id
-    newProduct.description = newProdcutDescription._id as mongoose.Types.ObjectId
-
-    // Saves the new product document to database
-    await newProduct.save()
-    
-    res.status(201).json(newProduct)
-  } catch (error: unknown) {
-    next(error)
+  if (typeof categories === 'string'){
+    categories = [categories]
   }
+
+  // 1) Upload images to the s3 bucket in a transaction? 
+  // 2) Start a mongoose transaction to first add the description, and then add the product, with the description and the image urls
+
+  
 })
 
 export default productRouter

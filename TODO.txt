@@ -5,6 +5,8 @@
   - Create the route for adding a new product
     - Handle adding the product images to the bucket
     - Save the product document to mongoDB with the image url
+    - add functionality for adding multiple images 
+    - https://www.npmjs.com/package/multer#:~:text=const%20cpUpload%20%3D%20upload.fields(%5B%7B%20name%3A%20%27avatar%27%2C%20maxCount%3A%201%20%7D%2C%20%7B%20name%3A%20%27gallery%27%2C%20maxCount%3A%208%20%7D%5D)
 
 TODOS:
 

@@ -71,6 +71,8 @@ orderRouter.post('', middlewear_1.authenticateUser, middlewear_1.parseBasket, (r
             if (bulkWriteOpResult.modifiedCount !== processedBasket.items.length) {
                 throw new Error('Error reserving stock, not enough stock!');
             }
+            // Creates the time to expire the temporder and release the stock 
+            const expiresAt = new Date(Date.now());
             // Creates the temp order
             const tempOrder = new TempOrder_1.default({
                 user: (_a = req.user) === null || _a === void 0 ? void 0 : _a._id,
@@ -79,12 +81,13 @@ orderRouter.post('', middlewear_1.authenticateUser, middlewear_1.parseBasket, (r
                     currencyCode: 'GBP',
                     value: processedBasket.totalCost
                 },
-                paymentTransactionId: paypalOrderId
+                paymentTransactionId: paypalOrderId,
+                expiresAt // Creates an expiry for 15 minutes time
             });
             yield tempOrder.save({ session });
             yield session.commitTransaction();
             // Since paypal order created an reservations made, returns the success to the paypal SDK
-            res.status(httpStatusCode).json(jsonResponse);
+            res.status(httpStatusCode).json(Object.assign(Object.assign({}, jsonResponse), { expiresAt }));
         }
         catch (error) {
             yield session.abortTransaction();

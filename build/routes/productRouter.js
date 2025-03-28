@@ -16,6 +16,7 @@ const express_1 = __importDefault(require("express"));
 const middlewear_1 = require("../utils/middlewear");
 const Product_1 = __importDefault(require("../models/Product"));
 const Description_1 = __importDefault(require("../models/Description"));
+const middlewear_2 = require("../utils/middlewear");
 const productRouter = express_1.default.Router();
 // TODO add filtering based on category or price range
 // Route for retrieving the products 
@@ -78,27 +79,31 @@ productRouter.delete('/:id', middlewear_1.authenticateAdmin, (req, res, next) =>
     }
 }));
 // Route for adding a new product document
-productRouter.post('', middlewear_1.authenticateAdmin, middlewear_1.parseNewProduct, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { name, categories, price, description } = req.body;
-    try {
-        // First creates the new product document
-        const newProduct = new Product_1.default({ name, categories, price });
-        // Then the new description is added for the product
-        // Product field is the id of the new product document
-        const newProdcutDescription = new Description_1.default({
-            content: description,
-            product: newProduct._id
-        });
-        // Description saved
-        yield newProdcutDescription.save();
-        // Description field of the new product as the new description document id
-        newProduct.description = newProdcutDescription._id;
-        // Saves the new product document to database
-        yield newProduct.save();
-        res.status(201).json(newProduct);
-    }
-    catch (error) {
-        next(error);
-    }
+productRouter.post('', middlewear_1.authenticateAdmin, middlewear_2.multerProductParser, middlewear_1.parseNewProduct, (req, _res, _next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { firstImage, gallery } = req.files;
+    const { name, price, stock, description, seller, categories } = req.body;
+    console.log({ name, price, stock, description, seller, categories });
+    console.log(firstImage);
+    console.log('#################################');
+    console.log(gallery);
+    // try {
+    //   // First creates the new product document
+    //   const newProduct = new Product({name, categories, price})
+    //   // Then the new description is added for the product
+    //   // Product field is the id of the new product document
+    //   const newProdcutDescription = new Description({
+    //     content: description,
+    //     product: newProduct._id
+    //   })
+    //   // Description saved
+    //   await newProdcutDescription.save()
+    //   // Description field of the new product as the new description document id
+    //   newProduct.description = newProdcutDescription._id as mongoose.Types.ObjectId
+    //   // Saves the new product document to database
+    //   await newProduct.save()
+    //   res.status(201).json(newProduct)
+    // } catch (error: unknown) {
+    //   next(error)
+    // }
 }));
 exports.default = productRouter;

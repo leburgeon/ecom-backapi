@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express"
-import {  NewOrderSchema, JwtUserPayloadSchema, LoginCredentialsSchema,  NewUserSchema, PaginationDetailsSchema, BasketSchema } from "./validators"
+import {  NewOrderSchema, JwtUserPayloadSchema, LoginCredentialsSchema,  NewUserSchema, PaginationDetailsSchema, BasketSchema, ProductImagesSchema } from "./validators"
 import mongoose from "mongoose"
 import { ZodError } from "zod"
 import jwt, { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
@@ -9,7 +9,8 @@ import { AuthenticatedRequest, Basket, RequestWithSearchFilters, ValidatedAndPop
 import { z } from 'zod'
 import Product from "../models/Product"
 import { StockError } from "./Errors"
-import multer from "multer"
+import multer, { MulterError } from "multer"
+import { NewProductSchema } from "./validators"
 
 // Middlewear for parsing the new request and ensuring that the request has fiels for page limit and page number 
 
@@ -83,16 +84,38 @@ export const parseNewUser = (req: Request, _res: Response, next: NextFunction) =
   }
 }
 
+// Multer file filter to only allow images to be uploaded
+const fileFilter = (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  if (file.mimetype.split('/')[0] !== 'image') {
+    // Pass a properly typed MulterError to the callback
+    cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'File is not of type image'));
+  } else {
+    cb(null, true);
+  }
+};
+
+export const multerProductParser = multer({ fileFilter })
+  .fields([
+    { name: 'firstImage', maxCount: 1 },
+    { name: 'gallery', maxCount: 4 }
+  ]);
+
 // Middlewear for parsing the request body for the fields required for a new product
-export const parseNewProduct = (req: Request, _res: Response, _next: NextFunction) => {
-  console.log('#################################')
-  console.log(req.body)
-  // try {
-  //   NewProductSchema.parse(req.body)
-  //   next()
-  // } catch (error: unknown) {
-  //   next(error)
-  // }
+export const parseNewProduct = (req: Request, _res: Response, next: NextFunction) => {
+  try {
+    console.log(req.files)
+    console.log('#################################')
+    console.log()
+    console.log('#################################')
+    console.log()
+    NewProductSchema.parse(req.body)
+    ProductImagesSchema.parse(req.files)
+    console.log('###############success!##################')
+    next()
+  } catch (error: unknown) {
+    console.error(error)
+    next(error)
+  }
 }
 
 // For parsing the request body for the login credentials
@@ -258,9 +281,6 @@ export const validateBasketStock = async (req: Request, res: Response, next: Nex
     }
 }
 
-// Middlewear for parsing file data for a new product upload 
-const 
-
 export const requestLogger = (req: Request, _res: Response, next: NextFunction) => {
   const method = req.method
   const url = req.originalUrl
@@ -269,11 +289,11 @@ export const requestLogger = (req: Request, _res: Response, next: NextFunction) 
   next()
 }
 
-
-
 // Error handler for the application
 export const errorHandler = (error: unknown, _req: Request, res: Response, _next: NextFunction) => {
-  if (error instanceof mongoose.Error.ValidationError) {  // For handling a mongoose validation error
+  if (error instanceof MulterError){
+    res.status(400).json({error: 'Error uploading image files: ' + error.message})
+  } else if (error instanceof mongoose.Error.ValidationError) {  // For handling a mongoose validation error
     res.status(400).json({error: error.message})
   } else if (error instanceof mongoose.Error.CastError) { // For handling mongoose cast error
     res.status(400).json({error: error.message})

@@ -67,6 +67,8 @@ const processBasket = (basket) => __awaiter(void 0, void 0, void 0, function* ()
             });
         }
     });
+    // Handles floating point precision conversion
+    processedBasket.totalCost = parseFloat(processedBasket.totalCost.toFixed(2));
     return processedBasket;
 });
 exports.processBasket = processBasket;

@@ -10,11 +10,10 @@ export const NewUserSchema = z.object({
 
 export const NewProductSchema = z.object({
   name: z.string(),
-  categories: z.string().array(),
+  categories: z.union([z.string().array(), z.string()]),
   price: z.coerce.number(),
   description: z.string().min(10),
-  initialStock: z.coerce.number(),
-  firstImage: z.string().url(),
+  stock: z.coerce.number(),
   seller: z.string()
 })
 
@@ -50,3 +49,14 @@ export const BasketSchema = z.object({
   quantity: z.coerce.number()
 }).array()
 
+const MulterImageSchema = z
+  .object({
+    mimetype: z.enum(["image/png", "image/jpeg", "image/jpg"]),
+    buffer: z.instanceof(Buffer), // Ensures the file has binary content
+    size: z.number().max(5 * 1024 * 1024, "File must be less than 5MB"), // Max 5MB
+  })
+
+export const ProductImagesSchema = z.object({
+  firstImage: MulterImageSchema.array().length(1),
+  gallery: MulterImageSchema.array().max(4).optional()
+})

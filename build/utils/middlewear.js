@@ -45,7 +45,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.errorHandler = exports.requestLogger = exports.validateBasketStock = exports.parseBasket = exports.parseProductToBasket = exports.parseFilters = exports.parseNewOrder = exports.parsePagination = exports.parseLoginCredentials = exports.parseNewProduct = exports.parseNewUser = exports.authenticateAdmin = exports.authenticateUser = void 0;
+exports.errorHandler = exports.requestLogger = exports.validateBasketStock = exports.parseBasket = exports.parseProductToBasket = exports.parseFilters = exports.parseNewOrder = exports.parsePagination = exports.parseLoginCredentials = exports.parseNewProduct = exports.multerProductParser = exports.parseNewUser = exports.authenticateAdmin = exports.authenticateUser = void 0;
 const validators_1 = require("./validators");
 const mongoose_1 = __importDefault(require("mongoose"));
 const zod_1 = require("zod");
@@ -55,6 +55,8 @@ const User_1 = __importDefault(require("../models/User"));
 const zod_2 = require("zod");
 const Product_1 = __importDefault(require("../models/Product"));
 const Errors_1 = require("./Errors");
+const multer_1 = __importStar(require("multer"));
+const validators_2 = require("./validators");
 // Middlewear for parsing the new request and ensuring that the request has fiels for page limit and page number 
 // Middlewear for authenticating a user and extracting the user info into the request
 const authenticateUser = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
@@ -127,10 +129,20 @@ const parseNewUser = (req, _res, next) => {
     }
 };
 exports.parseNewUser = parseNewUser;
+exports.multerProductParser = (0, multer_1.default)()
+    .fields([
+    { name: 'firstImage', maxCount: 1 },
+    { name: 'gallery', maxCount: 4 }
+]);
 // Middlewear for parsing the request body for the fields required for a new product
 const parseNewProduct = (req, _res, next) => {
+    console.log('#################################');
+    console.log();
+    console.log(req.body);
     try {
-        validators_1.NewProductSchema.parse(req.body);
+        validators_2.NewProductSchema.parse(req.body);
+        validators_1.ProductImagesSchema.parse(req.files);
+        console.log('###############success!##################');
         next();
     }
     catch (error) {
@@ -234,7 +246,7 @@ const validateBasketAndPopulate = (basket) => __awaiter(void 0, void 0, void 0, 
             throw new Errors_1.StockError('Product not found', item.id);
         }
         if (product.stock < item.quantity) {
-            throw new Errors_1.StockError('Out of stock', item.id, item.quantity - product.stock);
+            throw new Errors_1.StockError('Out of stock', item.id, product.stock);
         }
         return { quantity: item.quantity,
             product,
@@ -283,8 +295,9 @@ const validateBasketStock = (req, res, next) => __awaiter(void 0, void 0, void 0
             });
         }
         else if (missingStock.outOfStock.length > 0) {
-            res.status(400).json({ error: 'Some products out of stock',
-                ids: missingStock.outOfStock
+            // Returns the array of ids and the quantity to reduce, to make the basket stock-valid
+            res.status(400).json({ error: 'Not enough stock',
+                items: missingStock.outOfStock
             });
         }
         else {
@@ -304,7 +317,10 @@ const requestLogger = (req, _res, next) => {
 exports.requestLogger = requestLogger;
 // Error handler for the application
 const errorHandler = (error, _req, res, _next) => {
-    if (error instanceof mongoose_1.default.Error.ValidationError) { // For handling a mongoose validation error
+    if (error instanceof multer_1.MulterError) {
+        res.status(400).json({ error: 'Error uploading image files: ' + error.message });
+    }
+    else if (error instanceof mongoose_1.default.Error.ValidationError) { // For handling a mongoose validation error
         res.status(400).json({ error: error.message });
     }
     else if (error instanceof mongoose_1.default.Error.CastError) { // For handling mongoose cast error

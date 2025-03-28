@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const app_1 = __importDefault(require("./app"));
 const config_1 = __importDefault(require("./utils/config"));
 const mongoose_1 = __importDefault(require("mongoose"));
+//import { tempOrderCleanupTask } from './utils/backgroundJobs'
 const port = config_1.default.PORT || 3000;
 const startServer = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -29,6 +30,8 @@ const startServer = () => __awaiter(void 0, void 0, void 0, function* () {
         }
         console.error(error);
     }
+    // console.log('Starting jobs')
+    // tempOrderCleanupTask.start()
     app_1.default.listen(port, () => {
         console.log('App listening on port ' + port);
     });

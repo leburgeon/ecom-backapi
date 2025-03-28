@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.BasketSchema = exports.NewOrderSchema = exports.ObjectIdSchema = exports.PaginationDetailsSchema = exports.JwtUserPayloadSchema = exports.LoginCredentialsSchema = exports.NewProductSchema = exports.NewUserSchema = void 0;
+exports.ProductImagesSchema = exports.BasketSchema = exports.NewOrderSchema = exports.ObjectIdSchema = exports.PaginationDetailsSchema = exports.JwtUserPayloadSchema = exports.LoginCredentialsSchema = exports.NewProductSchema = exports.NewUserSchema = void 0;
 const zod_1 = require("zod");
 const mongoose_1 = __importDefault(require("mongoose"));
 exports.NewUserSchema = zod_1.z.object({
@@ -16,8 +16,7 @@ exports.NewProductSchema = zod_1.z.object({
     categories: zod_1.z.string().array(),
     price: zod_1.z.coerce.number(),
     description: zod_1.z.string().min(10),
-    initialStock: zod_1.z.coerce.number(),
-    firstImage: zod_1.z.string().url(),
+    stock: zod_1.z.coerce.number(),
     seller: zod_1.z.string()
 });
 exports.LoginCredentialsSchema = zod_1.z.object({
@@ -46,3 +45,14 @@ exports.BasketSchema = zod_1.z.object({
     id: exports.ObjectIdSchema,
     quantity: zod_1.z.coerce.number()
 }).array();
+const ImageSchema = zod_1.z
+    .instanceof(File)
+    .refine(file => [
+    'image/png',
+    'image/jpeg',
+    'image/jpg'
+].includes(file.type), { message: 'Invalid image file type' });
+exports.ProductImagesSchema = zod_1.z.object({
+    'firstImage': ImageSchema.array().length(1),
+    'gallery': ImageSchema.array().max(4)
+});

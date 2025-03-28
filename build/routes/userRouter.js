@@ -54,6 +54,10 @@ userRouter.post('/admin', middlewear_1.authenticateAdmin, middlewear_1.parseNewU
         next(error);
     }
 }));
+// Simple route for authenticating an admin user
+userRouter.get('/admin', middlewear_1.authenticateAdmin, (_req, res, _next) => {
+    res.status(200).json({ data: 'is admin' });
+});
 // Route for deleting a user
 userRouter.delete('/:id', middlewear_1.authenticateUser, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;

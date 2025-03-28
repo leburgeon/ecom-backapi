@@ -45,6 +45,10 @@ const tempOrderSchema = new mongoose_1.default.Schema({
         type: exports.totalCostSchema,
         required: true
     },
+    expiresAt: {
+        type: Date,
+        required: true
+    },
     paymentTransactionId: String
 }, { timestamps: true });
 exports.default = mongoose_1.default.model('TempOrder', tempOrderSchema);

@@ -4,6 +4,7 @@ import { NewProduct, ProductImages, RequestWithSearchFilters } from '../types'
 import Product from '../models/Product'
 import Description from '../models/Description'
 import { multerProductParser } from '../utils/middlewear'
+import { uploader } from '../utils/s3Service'
 
 const productRouter = express.Router()
 
@@ -71,14 +72,23 @@ productRouter.delete('/:id', authenticateAdmin, async (req: Request, res: Respon
 })
 
 // Route for adding a new product document
-productRouter.post('', authenticateAdmin, multerProductParser, parseNewProduct, async (req: Request<unknown, unknown, NewProduct>, _res: Response, _next: NextFunction) => {
-  const {firstImage, gallery} = (req.files as unknown) as ProductImages
+productRouter.post('', authenticateAdmin, multerProductParser, parseNewProduct, async (req: Request<unknown, unknown, NewProduct>, res: Response, _next: NextFunction) => {
+  const {firstImage} = req.files as unknown as ProductImages
 
-  const {name, price, stock, description, seller} = req.body
-  let {categories} = req.body
+  // const {name, price, stock, description, seller} = req.body
+  // let {categories} = req.body
 
-  if (typeof categories === 'string'){
-    categories = [categories]
+  // if (typeof categories === 'string'){
+  //   categories = [categories]
+  // }
+
+  try {
+    const result = await uploader(firstImage[0])
+    console.log(result)
+    res.status(200).json('ok!')
+  } catch (error) {
+    console.error(error)
+    res.status(500).json('bad')
   }
 
   // 1) Upload images to the s3 bucket in a transaction? 

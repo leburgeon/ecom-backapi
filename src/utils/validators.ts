@@ -49,12 +49,15 @@ export const BasketSchema = z.object({
   quantity: z.coerce.number()
 }).array()
 
-const MulterImageSchema = z
+export const MulterImageSchema = z
   .object({
     mimetype: z.enum(["image/png", "image/jpeg", "image/jpg"]),
     buffer: z.instanceof(Buffer), // Ensures the file has binary content
     size: z.number().max(5 * 1024 * 1024, "File must be less than 5MB"), // Max 5MB
+    originalname: z.string()
   })
+
+
 
 export const ProductImagesSchema = z.object({
   firstImage: MulterImageSchema.array().length(1),

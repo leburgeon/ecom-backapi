@@ -103,11 +103,6 @@ export const multerProductParser = multer({ fileFilter })
 // Middlewear for parsing the request body for the fields required for a new product
 export const parseNewProduct = (req: Request, _res: Response, next: NextFunction) => {
   try {
-    console.log(req.files)
-    console.log('#################################')
-    console.log()
-    console.log('#################################')
-    console.log()
     NewProductSchema.parse(req.body)
     ProductImagesSchema.parse(req.files)
     console.log('###############success!##################')

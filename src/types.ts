@@ -1,5 +1,5 @@
 import { Request } from "express"
-import { NewOrderSchema, NewUserSchema, LoginCredentialsSchema, JwtUserPayloadSchema, NewProductSchema, BasketSchema, ProductImagesSchema } from "./utils/validators"
+import { NewOrderSchema, NewUserSchema, LoginCredentialsSchema, JwtUserPayloadSchema, NewProductSchema, BasketSchema, ProductImagesSchema, MulterImageSchema } from "./utils/validators"
 import { z } from 'zod'
 import mongoose, {  ObjectId } from "mongoose"
 
@@ -14,6 +14,9 @@ export type NewProduct = z.infer<typeof NewProductSchema>
 
 // Type for the image files of a new product upload
 export type ProductImages = z.infer<typeof ProductImagesSchema>
+
+// Type for the single image 
+export type MulterImage = z.infer<typeof MulterImageSchema>
 
 // Interface for defining the type of an object that contains the exposable fields for a user
 export interface ExposableUser {

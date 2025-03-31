@@ -4,7 +4,11 @@ import { NewProduct, ProductImages, RequestWithSearchFilters } from '../types'
 import Product from '../models/Product'
 import Description from '../models/Description'
 import { multerProductParser } from '../utils/middlewear'
-import { uploader } from '../utils/s3Service'
+import s3Service from '../utils/s3Service'
+import {v4 as uuidV4} from 'uuid'
+import mongoose from 'mongoose'
+import config from '../utils/config'
+import { S3ServiceException } from '@aws-sdk/client-s3'
 
 const productRouter = express.Router()
 
@@ -72,29 +76,76 @@ productRouter.delete('/:id', authenticateAdmin, async (req: Request, res: Respon
 })
 
 // Route for adding a new product document
-productRouter.post('', authenticateAdmin, multerProductParser, parseNewProduct, async (req: Request<unknown, unknown, NewProduct>, res: Response, _next: NextFunction) => {
-  const {firstImage} = req.files as unknown as ProductImages
+productRouter.post('', authenticateAdmin, multerProductParser, parseNewProduct, async (req: Request<unknown, unknown, NewProduct>, res: Response, next: NextFunction) => {
+  
+  const {firstImage: firstImageArray} = req.files as unknown as ProductImages
+  const firstImage = firstImageArray[0]
 
-  // const {name, price, stock, description, seller} = req.body
-  // let {categories} = req.body
+  const {name, price, stock, description, seller} = req.body
+  let {categories} = req.body
 
-  // if (typeof categories === 'string'){
-  //   categories = [categories]
-  // }
-
-  try {
-    const result = await uploader(firstImage[0])
-    console.log(result)
-    res.status(200).json('ok!')
-  } catch (error) {
-    console.error(error)
-    res.status(500).json('bad')
+  if (typeof categories === 'string'){
+    categories = [categories]
   }
 
-  // 1) Upload images to the s3 bucket in a transaction? 
-  // 2) Start a mongoose transaction to first add the description, and then add the product, with the description and the image urls
+  // Generates a unique image key for the image, using the uuid and the original image name
+  const imageKey = `images/${uuidV4()}-${firstImage.originalname}`
 
-  
+  try {
+    // Upload image using the uplaoder
+    await s3Service.uploader(firstImage, imageKey)
+
+    // Start the transaction for the product upload
+    const session = await mongoose.startSession()
+    session.startTransaction()
+    try {
+      // Adds the description
+      const newDescription = new Description({content: description})
+
+      // Creates a new product
+      const firstImageUrl = `${config.CLOUD_FRONT_IMAGE_BUCKET_URL}/${imageKey}`
+      const newProduct = new Product({
+        name,
+        price,
+        stock,
+        reserved: 0,
+        description: newDescription._id,
+        firstImage: firstImageUrl,
+        seller,
+        categories,
+        rating: {
+          total: 0,
+          count: 0
+        }
+      })
+
+      await newProduct.save()
+      await newDescription.save()
+      
+      await session.commitTransaction()
+
+      res.status(200).json({data: newProduct._id.toString()})
+    } catch (error){
+      // Delete the image since it succeeded before, and abort the transaction
+      await s3Service.deleteImage(imageKey)
+      await session.abortTransaction()
+      // Throw error describing that mongoose failed
+      console.error(error)
+      throw error
+    } finally {
+      await session.endSession()
+    }
+  } catch (error){
+    console.error('Failed upload', error)
+    // Return status 500
+    let errorMessage = 'Failed to upload new product: '
+    if (error instanceof S3ServiceException){
+      errorMessage += 'Image upload failed'
+      res.status(500).json({error: errorMessage})
+    } else {
+      next(error)
+    }
+  }
 })
 
 export default productRouter

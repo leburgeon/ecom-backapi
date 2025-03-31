@@ -33,4 +33,16 @@ if (!PAYPALCLIENTSECRET || typeof PAYPALCLIENTSECRET !== 'string'){
 
 const PAYPALURLENDPOINT = process.env.ENVIRONMENT === 'sandbox' ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com'
 
-export default {PORT, MONGODB_URL, SECRET, PAYPALCLIENTID, PAYPALCLIENTSECRET, PAYPALURLENDPOINT}
+const CLOUD_FRONT_IMAGE_BUCKET_URL = process.env.CLOUD_FRONT_IMAGE_BUCKET_URL
+
+if (!CLOUD_FRONT_IMAGE_BUCKET_URL || typeof CLOUD_FRONT_IMAGE_BUCKET_URL !== 'string'){
+  throw new Error('CLOUD_FRONT_IMAGE_BUCKET_URL not set')
+}
+
+const AWS_BUCKET_NAME = process.env.AWS_BUCKET_NAME
+
+if (!AWS_BUCKET_NAME || typeof AWS_BUCKET_NAME !== 'string'){
+  throw new Error('AWS_BUCKET_NAME not set')
+}
+
+export default {PORT, MONGODB_URL, SECRET, PAYPALCLIENTID, PAYPALCLIENTSECRET, PAYPALURLENDPOINT, CLOUD_FRONT_IMAGE_BUCKET_URL, AWS_BUCKET_NAME}

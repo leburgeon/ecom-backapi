@@ -1,6 +1,7 @@
 import app from './app'
 import config from './utils/config'
 import mongoose from 'mongoose'
+import { testWorker } from './utils/taskQueues'
 //import { tempOrderCleanupTask } from './utils/backgroundJobs'
 
 const port = config.PORT || 3000
@@ -20,6 +21,9 @@ const startServer = async () => {
 
   // console.log('Starting jobs')
   // tempOrderCleanupTask.start()
+
+  testWorker.run()
+  console.log('test worker running')
   
   app.listen(port, () => {
     console.log('App listening on port ' + port)

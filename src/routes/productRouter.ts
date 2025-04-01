@@ -78,13 +78,15 @@ productRouter.delete('/:id', authenticateAdmin, async (req: Request, res: Respon
 // Route for adding a new product document
 productRouter.post('', authenticateAdmin, multerProductParser, parseNewProduct, async (req: Request<unknown, unknown, NewProduct>, res: Response, next: NextFunction) => {
   
-  const {firstImage: firstImageArray} = req.files as unknown as ProductImages
+  const {firstImage: firstImageArray, gallery} = req.files as unknown as ProductImages
   const firstImage = firstImageArray[0]
 
   const {name, price, stock, description, seller} = req.body
   let {categories} = req.body
 
-  if (typeof categories === 'string'){
+  if (!categories) {
+    categories = []
+  } else if (typeof categories === 'string'){
     categories = [categories]
   }
 
@@ -92,8 +94,30 @@ productRouter.post('', authenticateAdmin, multerProductParser, parseNewProduct, 
   const imageKey = `images/${uuidV4()}-${firstImage.originalname}`
 
   try {
-    // Upload image using the uplaoder
+    // Upload firstImage using the uplaoder
     await s3Service.uploader(firstImage, imageKey)
+
+    console.log('#################################')
+    console.log('uploaded first image')
+
+    // Upload the gallery images if they exist
+    const galleryKeys: string[] = []
+    if (Array.isArray(gallery)){
+      // For each of the images
+      const promises = gallery.map((image) => {
+        // Generates the key and adds to the keys array
+        const key = `images/${uuidV4()}-${image.originalname}`
+        galleryKeys.push(key)
+        // Uploads the image using the key
+        return s3Service.uploader(image, key)
+      })
+
+      // Waits for the promises to resolve to a single prosmise
+      await Promise.all(promises)
+
+      console.log('#################################')
+      console.log('uploaded other images: ', galleryKeys)
+    }
 
     // Start the transaction for the product upload
     const session = await mongoose.startSession()
@@ -111,6 +135,8 @@ productRouter.post('', authenticateAdmin, multerProductParser, parseNewProduct, 
         reserved: 0,
         description: newDescription._id,
         firstImage: firstImageUrl,
+        gallery: galleryKeys.length === 0 ? []
+          :galleryKeys.map(key => `${config.CLOUD_FRONT_IMAGE_BUCKET_URL}/${key}`),
         seller,
         categories,
         rating: {
@@ -123,6 +149,9 @@ productRouter.post('', authenticateAdmin, multerProductParser, parseNewProduct, 
       await newDescription.save()
       
       await session.commitTransaction()
+
+      console.log('#################################')
+      console.log('committed transaction')
 
       res.status(200).json({data: newProduct._id.toString()})
     } catch (error){

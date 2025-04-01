@@ -11,6 +11,7 @@ import Product from "../models/Product"
 import { StockError } from "./Errors"
 import multer, { MulterError } from "multer"
 import { NewProductSchema } from "./validators"
+import { addTestJob } from "./taskQueues"
 
 // Middlewear for parsing the new request and ensuring that the request has fiels for page limit and page number 
 
@@ -277,6 +278,7 @@ export const validateBasketStock = async (req: Request, res: Response, next: Nex
 }
 
 export const requestLogger = (req: Request, _res: Response, next: NextFunction) => {
+  addTestJob()
   const method = req.method
   const url = req.originalUrl
   const body = req.body

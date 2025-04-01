@@ -32,6 +32,9 @@ const productSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  gallery: {
+    type: [String]
+  },
   seller: {
     type: String,
     required: true

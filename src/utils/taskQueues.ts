@@ -1,6 +1,7 @@
 import { Queue, Worker } from "bullmq"
 import Redis from 'ioredis'
 import config from "./config"
+import { sendTestEmail } from "./emailController"
 
 // Creates a new redis connection for bullmq to connect to
 const connection = new Redis(config.UPSTASH_ENDPOINT, { maxRetriesPerRequest: null })
@@ -18,12 +19,12 @@ export const addTestJob = async () => {
 // test worker logs the job 5 seconds after added
 export const testWorker = new Worker('Test', async (job) => {
   console.log('worker recieved job, and started async operation')
-  setTimeout(() => {
-    console.log('#################################')
-    console.log(job.name)
-    console.log('#################################')
-    console.log(job.data)
-  }, 5000);
+  try {
+    const info = await sendTestEmail()
+    console.log('successfully sent test email', info.messageId, 'with job: ', job.data)
+  } catch (error){
+    console.error('Failed to send email', error)
+  }
 }, { connection, autorun: false })
 
 

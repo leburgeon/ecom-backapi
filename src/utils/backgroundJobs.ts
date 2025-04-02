@@ -3,7 +3,7 @@ import TempOrder from '../models/TempOrder'
 import { createSessionAndReleaseStock } from './helpers'
 
 // A task for cleaning up expired tempOrders that executes every 1 minute
-export const tempOrderCleanupTask = cron.schedule('*/2 * * * *', async () => {
+export const tempOrderCleanupTask = cron.schedule('*/20 * * * *', async () => {
   console.log('#################################')
   console.log('Temp Order Cleanup Executed')
   try {

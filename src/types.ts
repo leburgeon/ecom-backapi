@@ -71,6 +71,7 @@ export interface PageQueriesRequest extends Request {
 // Type of the parsed new order request body
 export type NewOrder = z.infer<typeof NewOrderSchema>
 
+// Type for a basket object
 export type Basket = z.infer<typeof BasketSchema>
 
 // Type for an array of product documents with a quantity
@@ -89,6 +90,7 @@ export type ProcessedBasket = {
   totalCost: number
 }
 
+// Typing for the results of basket validation
 export type ValidatedAndPopulatedBasketResult = {
   missingStock: {notFound: ObjectId[],
     outOfStock: {id: ObjectId, quantity: number}[]
@@ -96,6 +98,7 @@ export type ValidatedAndPopulatedBasketResult = {
   populatedItems: PopulatedBasket
 }
 
+// Typing with the fields necessary for validating a tempOrder against a purchaseUnit
 export type TempOrderForValidating = {
   _id: mongoose.Types.ObjectId,
   items: {

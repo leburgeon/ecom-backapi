@@ -1,7 +1,7 @@
 import app from './app'
 import config from './utils/config'
 import mongoose from 'mongoose'
-import { tempOrderCleanupTask } from './utils/backgroundJobs'
+import { tempOrderCleanupTask } from './utils/cronJobs'
 import { startTaskQueueWorkers } from './utils/taskQueues'
 
 const port = config.PORT || 3000

@@ -3,6 +3,7 @@ import config from './config'
 import { ProcessedBasket } from '../types'
 import { mapProcessedBasketItemsToPurchaseUnitItems } from './helpers'
 
+// Initialises a new paypal client with the authentication details
 const client = new Client({
   clientCredentialsAuthCredentials: {
     oAuthClientId: config.PAYPALCLIENTID,
@@ -39,6 +40,7 @@ const createOrder = async (basket: ProcessedBasket) => {
   }
 }
 
+// Method for capuring payment of an order
 const captureOrder = async (orderId: string) => {
   const collect = {
     id: orderId,
@@ -62,6 +64,7 @@ const captureOrder = async (orderId: string) => {
   }
 }
 
+// For retrieving the details of an existing paypal order
 const getOrder = async (orderId: string): Promise<Order> => {
   try {
     const order = await ordersController.ordersGet({id: orderId})

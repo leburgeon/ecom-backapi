@@ -12,7 +12,7 @@ import { StockError } from "./Errors"
 import multer, { MulterError } from "multer"
 import { NewProductSchema } from "./validators"
 
-// Middlewear for parsing the new request and ensuring that the request has fiels for page limit and page number 
+
 
 // Middlewear for authenticating a user and extracting the user info into the request
 export const authenticateUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -94,11 +94,14 @@ const fileFilter = (_req: Request, file: Express.Multer.File, cb: multer.FileFil
   }
 };
 
+// Middlewear for handling FormData multipart/form-data requests.
+// Only allows images to be uploaded and under firstImage or gallery[]
 export const multerProductParser = multer({ fileFilter })
   .fields([
     { name: 'firstImage', maxCount: 1 },
     { name: 'gallery', maxCount: 4 }
   ]);
+
 
 // Middlewear for parsing the request body for the fields required for a new product
 export const parseNewProduct = (req: Request, _res: Response, next: NextFunction) => {
@@ -276,6 +279,7 @@ export const validateBasketStock = async (req: Request, res: Response, next: Nex
     }
 }
 
+// Logs each of the requests that come through
 export const requestLogger = (req: Request, _res: Response, next: NextFunction) => {
   const method = req.method
   const url = req.originalUrl

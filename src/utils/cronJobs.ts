@@ -2,20 +2,20 @@ import cron from 'node-cron'
 import TempOrder from '../models/TempOrder'
 import { createSessionAndReleaseStock } from './helpers'
 
-// A task for cleaning up expired tempOrders that executes every 1 minute
-export const tempOrderCleanupTask = cron.schedule('*/20 * * * *', async () => {
-  console.log('#################################')
-  console.log('Temp Order Cleanup Executed')
+// A task for cleaning up expired tempOrders that executes every 5 minutes
+export const tempOrderCleanupTask = cron.schedule('*/5 * * * *', async () => {
   try {
-     // Collects all the 
+     // Collects all the tempOrders that have expired
     const expiredTempOrders = await TempOrder.find({
       expiresAt: {$lte: Date.now()}
     })
 
+    // Each tempOrder is released within a session that also updates the stock of the products
     const releasePromises = expiredTempOrders.map(async (tempOrder) => {
       return createSessionAndReleaseStock(tempOrder)
     })
 
+    // DANGER: Blocking! Consider switching to a task queue for each?
     const results = await Promise.allSettled(releasePromises)
     let released = 0
     let failed = 0

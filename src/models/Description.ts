@@ -1,5 +1,6 @@
 import mongoose from 'mongoose'
 
+// Model for the description assoicated with a product
 const descriptionSchema = new mongoose.Schema({
   content: {
     type: String,

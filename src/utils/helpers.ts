@@ -7,6 +7,8 @@ import mongoose, { ClientSession  } from "mongoose";
 import TempOrder from "../models/TempOrder";
 import Order from "../models/Order";
 
+// Takes an array of product ids and quantities, and populates fields including name, price and total cost
+// Also validates the stock of each of the items in the basket exist
 export const processBasket = async (basket: {id: string, quantity: number}[]): Promise<ProcessedBasket> => {
   
   // If the basket is empty, returns error
@@ -67,6 +69,7 @@ export const processBasket = async (basket: {id: string, quantity: number}[]): P
   return processedBasket
 }
 
+// Converts the proccessed basket into the format needed for the oder documents
 export const mapProcessedBasketItemsToOrderItems = (basket: ProcessedBasket) => {
   return basket.items.map(item => ({
     product: item.product.id,
@@ -76,6 +79,7 @@ export const mapProcessedBasketItemsToOrderItems = (basket: ProcessedBasket) => 
   }))
 }
 
+// Converts the processed basket into the format needed for the paypal order (Purchase units)
 export const mapProcessedBasketItemsToPurchaseUnitItems = (basket: ProcessedBasket): OrderRequest => {
   const { totalCost, items } = basket
   const itemArray: Item[] = items.map(item => {
@@ -109,6 +113,7 @@ export const mapProcessedBasketItemsToPurchaseUnitItems = (basket: ProcessedBask
     }
 }
 
+// Helper method for ensuring that the purchase unit items and total price match the associated tempOrder items
 export const validatePurchaseUnitsAgainstTempOrder = (purchaseUnit: PurchaseUnit, tempOrder: TempOrderForValidating) => {
   const {amount} = purchaseUnit
   if (!amount) {
@@ -154,6 +159,8 @@ export const validatePurchaseUnitsAgainstTempOrder = (purchaseUnit: PurchaseUnit
   }
 }
 
+// this method is called within a session, and removes a tempOrder after the order has been confirmed
+// Updates the reserved stock count to reflect this
 const handleReservationAndBasketCleanupWithinSession = async (session: ClientSession, userId: mongoose.Types.ObjectId, tempOrder: TempOrderForValidating) => {
   try {
     // Array of operation object for bulkWrite
@@ -186,6 +193,7 @@ const handleReservationAndBasketCleanupWithinSession = async (session: ClientSes
   }
 }
 
+// Method for creating and handling the session to remove tempOrder and update stock reservation
 export const creatSessionAndHandleStockCleanup = async (userId: mongoose.Types.ObjectId, tempOrder: TempOrderForValidating) => {
   console.log('session started!')
   try {
@@ -207,6 +215,7 @@ export const creatSessionAndHandleStockCleanup = async (userId: mongoose.Types.O
   }
 }
 
+// Method for creating a session and then releasing the reserved stock from a cancelled or expired order
 export const createSessionAndReleaseStock = async (tempOrderToRemove: TempOrderForValidating) => {
   // Starts the transaction for deleting the temp order and releasing the stock
   const session = await mongoose.startSession()

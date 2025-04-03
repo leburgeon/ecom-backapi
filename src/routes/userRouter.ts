@@ -16,9 +16,6 @@ userRouter.get('', authenticateAdmin, async (_req: AuthenticatedRequest, res: Re
   }
 })
 
-// TODO Route for getting the data for a single user, returns the user and populated order data
-
-
 // Route for adding a new user
 userRouter.post('', parseNewUser, async (req: Request<unknown, unknown, NewUser>, res: Response, next: NextFunction) => {
   const { name, email, password } = req.body

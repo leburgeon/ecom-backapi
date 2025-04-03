@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+// Mongoose model for the users basket
 const basketSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,

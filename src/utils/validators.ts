@@ -1,7 +1,6 @@
 import { z } from 'zod'
 import mongoose from 'mongoose'
 
-
 export const NewUserSchema = z.object({
   name: z.string(),
   email: z.string().email().trim().toLowerCase(),
@@ -56,8 +55,6 @@ export const MulterImageSchema = z
     size: z.number().max(5 * 1024 * 1024, "File must be less than 5MB"), // Max 5MB
     originalname: z.string()
   })
-
-
 
 export const ProductImagesSchema = z.object({
   firstImage: MulterImageSchema.array().length(1),

@@ -12,10 +12,11 @@ import { S3ServiceException } from '@aws-sdk/client-s3'
 
 const productRouter = express.Router()
 
-// TODO add filtering based on category or price range
-// Route for retrieving the products 
+// Route for retrieving the products
+  // Filters results based on category, aswell as pagination information
 productRouter.get('', parsePagination, parseFilters, async (req: RequestWithSearchFilters, res: Response, next: NextFunction) => {
   const filters = req.filters
+
  // Parses the query strings to integers
   const page = parseInt(req.query.page as string) || 1
   const limit = parseInt(req.query.limit as string) || 10
@@ -30,6 +31,7 @@ productRouter.get('', parsePagination, parseFilters, async (req: RequestWithSear
   }
 })
 
+// Route for getting the products for a new page
 productRouter.get('/pageof', parsePagination, parseFilters, async (req: RequestWithSearchFilters, res: Response, next: NextFunction) => {
   const filters = req.filters
   const page = parseInt(req.query.page as string) || 1
@@ -45,7 +47,7 @@ productRouter.get('/pageof', parsePagination, parseFilters, async (req: RequestW
 
 })
 
-// Route for retrieving a single product from the database and populating it
+// Route for retrieving a single populated product
 productRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   const { id } = req.params
 
@@ -76,6 +78,8 @@ productRouter.delete('/:id', authenticateAdmin, async (req: Request, res: Respon
 })
 
 // Route for adding a new product document
+  // Middlewear ensures that the required fields exist, and that there is at least a first image
+  // Imgages uploaded to an S3 bucket before the product document is saved
 productRouter.post('', authenticateAdmin, multerProductParser, parseNewProduct, async (req: Request<unknown, unknown, NewProduct>, res: Response, next: NextFunction) => {
   
   const {firstImage: firstImageArray, gallery} = req.files as unknown as ProductImages
@@ -97,9 +101,6 @@ productRouter.post('', authenticateAdmin, multerProductParser, parseNewProduct, 
     // Upload firstImage using the uplaoder
     await s3Service.uploader(firstImage, imageKey)
 
-    console.log('#################################')
-    console.log('uploaded first image')
-
     // Upload the gallery images if they exist
     const galleryKeys: string[] = []
     if (Array.isArray(gallery)){
@@ -114,9 +115,6 @@ productRouter.post('', authenticateAdmin, multerProductParser, parseNewProduct, 
 
       // Waits for the promises to resolve to a single prosmise
       await Promise.all(promises)
-
-      console.log('#################################')
-      console.log('uploaded other images: ', galleryKeys)
     }
 
     // Start the transaction for the product upload
@@ -145,21 +143,28 @@ productRouter.post('', authenticateAdmin, multerProductParser, parseNewProduct, 
         }
       })
 
-      await newProduct.save()
-      await newDescription.save()
+      await newProduct.save({session})
+      await newDescription.save({session})
       
       await session.commitTransaction()
 
-      console.log('#################################')
-      console.log('committed transaction')
-
       res.status(200).json({data: newProduct._id.toString()})
     } catch (error){
-      // Delete the image since it succeeded before, and abort the transaction
+      // If uploading a new product failes after the images have been uploaded, remove them from the bucket
       await s3Service.deleteImage(imageKey)
+
+      // If there were gallery images, delete them as well
+      if (galleryKeys.length !== 0){
+        const promises = galleryKeys.map((key) => {
+          return s3Service.deleteImage(key)
+        })
+        await Promise.all(promises)
+      }
+
+      // Aborts the transaction
       await session.abortTransaction()
-      // Throw error describing that mongoose failed
-      console.error(error)
+
+      // Throws the error to the outer try-block to ensure that the response is sent
       throw error
     } finally {
       await session.endSession()

@@ -9,16 +9,20 @@ import { processBasket, mapProcessedBasketItemsToOrderItems, validatePurchaseUni
 import TempOrder from '../models/TempOrder'
 import BasketModel from '../models/Basket'
 import { enqueueConfirmationEmail } from '../utils/taskQueues'
+
 // Baseurl is /api/orders
 const orderRouter = express.Router()
 
-// Create a route for 1) checkout, which validates stock and returns a formatted basket to be displayed on the checkout page, aswell as returned with the createOrder route
+// Route for validating a basket for checkout, and re-calculating the total price
+// Parses the basket to ensure each product exists and there are no duplicate items and then validates the stock
+  // Validate stock middlewear returns the stock quantities that were invalid in error response
 orderRouter.post('/checkout', parseBasket, validateBasketStock, async(req: AuthenticatedRequest<unknown, unknown, PopulatedBasket>, res: Response, _next: NextFunction) => {
-  // Calculates the total for the products in the basket and formats the basket to return
-  const populatedBasket = req.body
+  // Gets the parsed and populated basket from the request body
+  const populatedBasket: PopulatedBasket = req.body
 
   let totalPrice = 0
 
+  // for formatting the basket for the checkout
   const basketToReturn = populatedBasket.map(basketItem => {
     const { price, name, _id } = basketItem.product
     totalPrice += price * basketItem.quantity
@@ -33,14 +37,17 @@ orderRouter.post('/checkout', parseBasket, validateBasketStock, async(req: Authe
   res.status(200).json({basket: basketToReturn, totalPrice})
 })
 
-// Order router for creating the paypal order, and a temp order for order validation onApprove()
+// Called in the createOrder() callback of the paypal SDK
+// Route for creating the paypal order and reserving the stock items in the basket in a tempOrder document
+  // tempOrder created within a transaction alongside the stock reduction on the product documents
+  // Ensures that tempOrder is a valid reservation of the stock
 orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedRequest<unknown, unknown, Basket>, res: Response, _next: NextFunction) => {
   try {
-    // 1) Proccesses the basket to create the paypal order
+    // Proccesses the basket for the paypal order
     // Throws an error if basket empty, any products not found, or if there is not enough stock on any of the product docs
     const processedBasket: ProcessedBasket = await processBasket(req.body)
 
-    // Calls the orderCreate on the paypal controller
+    // Attempts to create the paypal order
     // Will throw error if failed to create order
     const { jsonResponse, httpStatusCode } = await paypalController.createOrder(processedBasket)
     const { id: paypalOrderId } = jsonResponse
@@ -49,8 +56,9 @@ orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedReq
     const session = await mongoose.startSession()
     session.startTransaction()
     
+    // This try block is for performing the reservations and creating temporary order within a transaction
     try {
-      // Try block for performing the reservations and creating temporary order
+      // Operations to update the stock of the products
       const bulkOps = processedBasket.items.map(({ product, quantity }) => {
         return {
           updateOne: {
@@ -60,7 +68,7 @@ orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedReq
         }
       })
 
-      // Bulk writes the operations to mongodb within the transaction
+      // Writes the operations to mongodb within the transaction
       // ordered=true option inducates that the updates will operate in order, all terminate on the first error
       const bulkWriteOpResult = await Product.bulkWrite(bulkOps, {session: session, ordered: true})
 
@@ -69,8 +77,9 @@ orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedReq
         throw new Error('Error reserving stock, not enough stock!')
       }
       
-      // Creates the time to expire the temporder and release the stock 
-      const expiresAt = new Date(Date.now())
+      // Creates an expiry time for the tempOrder (15 mins)
+      // Ensures that if an error occurs, stock is not perminantly reserved
+      const expiresAt = new Date(Date.now() - 1000 * 60 * 15)
 
       // Creates the temp order
       const tempOrder = new TempOrder({
@@ -87,7 +96,7 @@ orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedReq
       await tempOrder.save({session})
       await session.commitTransaction()
       
-      // Since paypal order created an reservations made, returns the success to the paypal SDK
+      // Returns the jsonResponse, crucially including the orderNumber
       res.status(httpStatusCode).json({...jsonResponse, expiresAt})
 
     } catch (error){
@@ -109,12 +118,10 @@ orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedReq
   }
 })
 
-// Route for creating the order, and capturing payment
+// Route for creating the order, and if successful, capturing payment
 // This route is called by the paypal SDK after the user has authorised payment
 orderRouter.post('/capture/:orderID', authenticateUser, async (req: AuthenticatedRequest, res: Response, _next: NextFunction) => {
-  // Try block responsible for validating order, capturing payment, and creating order
-    // success responds 
-    // catch responds error
+  // This try block is responsible for validating order, capturing payment, and creating order
   try {
     // VALIDATES ORDER AGAINST TEMPORDER
     const { orderID } = req.params
@@ -135,7 +142,7 @@ orderRouter.post('/capture/:orderID', authenticateUser, async (req: Authenticate
     const { jsonResponse, httpStatusCode } = await paypalController.captureOrder(orderID)
     const {status: paypalOrderStatus, id: paypalOrderId} = jsonResponse
 
-    // Generates a user friendly order number
+    // Generates a user-friendly order number
     const orderNumber: string = await generateOrderNumber()
 
     // Creates new order
@@ -164,6 +171,7 @@ orderRouter.post('/capture/:orderID', authenticateUser, async (req: Authenticate
 
     // Handles updating the stock reservation and deleting the tempOrder in a session
     // Does not throw an error, future features will add failed reservation updates to a task queue!
+    // Will move this job to a task queue later!
     const userId = (req.user as { _id: mongoose.Types.ObjectId })._id
     try {
       creatSessionAndHandleStockCleanup(userId, tempOrder)
@@ -182,10 +190,9 @@ orderRouter.post('/capture/:orderID', authenticateUser, async (req: Authenticate
 })
 
 
-// Route for releasing reserved stock from a tempOrder after a paypal payment error
+// Route for releasing reserved stock from a tempOrder after a non-recoverable payment error
 orderRouter.post('/release/:orderID', authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
   const { orderID } = req.params
-
   // Finds the tempOrder
   const tempOrderToRemove = await TempOrder.findOne({paymentTransactionId: orderID})
   // If the tempOrder still exists, then call the stock release handler

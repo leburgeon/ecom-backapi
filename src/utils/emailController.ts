@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer'
 import config from './config'
 import { generateOrderConfirmationEmail } from './emailTemplates'
 
+// transporter, which links to the mailgun account
 const transporter = nodemailer.createTransport({
   host: 'smtp.mailgun.org',
   port: 587,
@@ -12,6 +13,7 @@ const transporter = nodemailer.createTransport({
   }
 })
 
+// Method for sending a confirmation email
 export const sendConfirmationEmail = (orderNumber: string, name: string, email: string) => {
   return transporter.sendMail({
     from: '"Order Confirmation" <test@ethereal.com>',

@@ -1,6 +1,7 @@
 import mongoose from 'mongoose'
 import { totalCostSchema } from './TempOrder'
 
+// Mongoose model for a new order
 const orderSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,

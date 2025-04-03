@@ -1,6 +1,7 @@
 import config from "./config";
 
-export const generateOrderConfirmationEmail = (orderID: string, name: string): string => {
+// Generates a semi-personalised email confirmation, with the order number and name of the user
+export const generateOrderConfirmationEmail = (orderNumber: string, name: string): string => {
   return `
     <!DOCTYPE html>
     <html>
@@ -51,7 +52,7 @@ export const generateOrderConfirmationEmail = (orderID: string, name: string): s
             <h1>Order Confirmation</h1>
             <p>Hi ${name},</p>
             <p>Thank you for your purchase! Your order has been successfully placed.</p>
-            <p>Your Order ID is: <span class="order-id">${orderID}</span></p>
+            <p>Your Order ID is: <span class="order-id">${orderNumber}</span></p>
             <p>We hope you enjoy your purchase. If you have any questions, feel free to contact us.</p>
           </div>
           <div class="footer">

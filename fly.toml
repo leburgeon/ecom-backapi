@@ -1,0 +1,30 @@
+# fly.toml app configuration file generated for bonbuy-proj on 2025-04-03T14:54:34+01:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'bonbuy-proj'
+primary_region = 'lhr'
+
+[build]
+# if building from typescript:
+	command = 'npm run build'
+
+[process]
+	app = 'node build/index.js'
+
+[env]
+	PORT = "3000" # add this
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 1W
+  processes = ['app']
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1

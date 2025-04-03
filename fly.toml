@@ -7,21 +7,20 @@ app = 'bonbuy-proj'
 primary_region = 'lhr'
 
 [build]
-# if building from typescript:
 	command = 'npm run build'
 
 [process]
-	app = 'node build/index.js'
+	app = 'node builld/index.js'
 
 [env]
-	PORT = "3000" # add this
+	PORT = "3000"
 
 [http_service]
   internal_port = 3000
   force_https = true
   auto_stop_machines = 'stop'
   auto_start_machines = true
-  min_machines_running = 1W
+  min_machines_running = 1
   processes = ['app']
 
 [[vm]]

@@ -8,6 +8,7 @@ import paypalController from '../utils/paypalController'
 import { processBasket, mapProcessedBasketItemsToOrderItems, validatePurchaseUnitsAgainstTempOrder, creatSessionAndHandleStockCleanup, createSessionAndReleaseStock, generateOrderNumber } from '../utils/helpers'
 import TempOrder from '../models/TempOrder'
 import BasketModel from '../models/Basket'
+import { enqueueConfirmationEmail } from '../utils/taskQueues'
 // Baseurl is /api/orders
 const orderRouter = express.Router()
 
@@ -108,9 +109,8 @@ orderRouter.post('', authenticateUser, parseBasket, async (req: AuthenticatedReq
   }
 })
 
-// 3) onApprove which updates stock levels and captures the payment
-//   onApprove also needs to update the basket information for the user
-//   This is also where a task-queue would be implemented to send confirmation emails
+// Route for creating the order, and capturing payment
+// This route is called by the paypal SDK after the user has authorised payment
 orderRouter.post('/capture/:orderID', authenticateUser, async (req: AuthenticatedRequest, res: Response, _next: NextFunction) => {
   // Try block responsible for validating order, capturing payment, and creating order
     // success responds 
@@ -136,7 +136,7 @@ orderRouter.post('/capture/:orderID', authenticateUser, async (req: Authenticate
     const {status: paypalOrderStatus, id: paypalOrderId} = jsonResponse
 
     // Generates a user friendly order number
-    const orderNumber = await generateOrderNumber()
+    const orderNumber: string = await generateOrderNumber()
 
     // Creates new order
     const newOrder = new Order({
@@ -152,6 +152,9 @@ orderRouter.post('/capture/:orderID', authenticateUser, async (req: Authenticate
       }
     })
     await newOrder.save()
+
+    // Adds sending a confirmation email to the task queue
+    await enqueueConfirmationEmail(newOrder.orderNumber as string, req.user?.name as string, req.user?.email as string)
 
     // Returns the response to the client since payment captured and order created
     res.status(httpStatusCode).json({...jsonResponse, orderNumber})

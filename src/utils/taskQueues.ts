@@ -1,30 +1,38 @@
 import { Queue, Worker } from "bullmq"
 import Redis from 'ioredis'
 import config from "./config"
-import { sendTestEmail } from "./emailController"
+import { sendConfirmationEmail } from "./emailController"
 
 // Creates a new redis connection for bullmq to connect to
 const connection = new Redis(config.UPSTASH_ENDPOINT, { maxRetriesPerRequest: null })
 
-// Creates a new queue for testing
-const testQueue = new Queue('Test', {connection})
+// Creates a new queue for email tasks
+const emailQueue = new Queue('Email', {connection})
 
-// Function for adding a job to the queue
-export const addTestJob = async () => {
-  console.log('job added to the queue')
-  await testQueue.add('a test job added to the queue', {data: 'foo'})
+// Function for enqueing a conformation email job
+export const enqueueConfirmationEmail = async (orderNumber: string, name: string, email: string) => {
+  // Adds the job to the queue with the name: 'Order Confirmation Email'
+  await emailQueue.add('Order Confirmation Email', {orderNumber, name, email})
 }
-
-// Worker for handling the jobs asynchronously
-// test worker logs the job 5 seconds after added
-export const testWorker = new Worker('Test', async (job) => {
-  console.log('worker recieved job, and started async operation')
-  try {
-    const info = await sendTestEmail()
-    console.log('successfully sent test email', info.messageId, 'with job: ', job.data)
-  } catch (error){
-    console.error('Failed to send email', error)
+// Worker for handling 'Email' jobs
+const emailWorker = new Worker('Email', async (job) => {
+  console.log('email worker recieved job, and started async operation')
+  if (job.name === 'Order Confirmation Email'){
+    const {orderNumber, name, email} = job.data
+    try {
+      const info = await sendConfirmationEmail(orderNumber, name, email)
+      console.log('Send confirmation email!', info.messageId)
+    } catch ( error ){
+      console.error('Error sending confirmation email!', error)
+      job.retry()
+    }
   }
 }, { connection, autorun: false })
+
+
+// Function for starting the workers
+export const startTaskQueueWorkers = () => {
+  emailWorker.run()
+}
 
 

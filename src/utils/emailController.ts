@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer'
-import { MailOptions } from 'nodemailer/lib/json-transport'
 import config from './config'
+import { generateOrderConfirmationEmail } from './emailTemplates'
 
 const transporter = nodemailer.createTransport({
   host: 'smtp.mailgun.org',
@@ -12,15 +12,11 @@ const transporter = nodemailer.createTransport({
   }
 })
 
-const email:MailOptions  = {
-  from: '"Test Name" <lwrgdsf@gdbb.com>',
-  to: 'leburgeon1@gmail.com',
-  subject: 'Hello!',
-  text: 'Some text some \n tezt!',
-  html: '<h1>some html<h1>'
-}
-
-export const sendTestEmail = () => {
-  console.log('Sending test email!')
-  return transporter.sendMail(email)
+export const sendConfirmationEmail = (orderNumber: string, name: string, email: string) => {
+  return transporter.sendMail({
+    from: '"Order Confirmation" <test@ethereal.com>',
+    to: email,
+    subject: 'Thank You!',
+    html: generateOrderConfirmationEmail(orderNumber, name)
+  })
 }

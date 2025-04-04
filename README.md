@@ -26,6 +26,10 @@ This project demonstrates advanced backend development skills, including **trans
 - **Email Delivery**: Nodemailer, Mailgun
 - **Deployment**: Fly.io
 
+## Demo:
+![Registration and Products demo](media/ecom-reg-demo.gif)
+![Checkout and stock validation demo](media/ecom-reg-demo2.gif)
+
 ## Installation
 1. Clone the repository:
    ```sh

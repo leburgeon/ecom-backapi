@@ -21,7 +21,7 @@ jobs:
       - run: npm install # Installs the dependencies for the project
       - name: Check Style
         run: npm run lint
-      - run: npm run build # Builds the app incl typescript etc
+      - run: npm run build:full # Builds the app incl typescript etc
       - if: ${{success() && github.event_name == 'push'}}
         uses: superfly/flyctl-actions/setup-flyctl@master
       - if: ${{success() && github.event_name == 'push'}}

@@ -30,20 +30,22 @@ jobs:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
   tag-release-and-notify:
-    needs: [deployment-pipeline]
+    needs: [deployment-pipeline] # Will wait for deployment-pipeline to finish and be successful
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps: 
-      - uses: actions/checkout@v4
+      - if: ${{github.event_name == 'push'}}
+        uses: actions/checkout@v4
         with:
           fetch-depth: '0'
-      - name: Bump Version And Push Tag
+      - if: ${{github.event_name == 'push'}}
+        name: Bump Version And Push Tag
         id: version-bump
         uses: anothrNick/github-tag-action@v1
         env: 
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
-      - if: success()
+      - if: ${{success() && github.event_name == 'push'}}
         name: Notify Discord Successful Deploy
         uses: rjstone/discord-webhook-notify@v1
         with:

@@ -6,9 +6,11 @@
   "scripts": {
     "tsc": "tsc",
     "start": "node server/build/index.js",
-    "dev": "ts-node-dev server/index.ts",
+    "dev-backend": "ts-node-dev server/index.ts",
+    "dev-frontend": "vite",
     "lint": "eslint",
-    "build": "tsc"
+    "build": "tsc",
+    "build:full": "vite build && tsc"
   },
   "author": "",
   "license": "ISC",

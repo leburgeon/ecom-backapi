@@ -19,6 +19,10 @@ app.use(express.urlencoded({extended: true}))
 
 app.use(requestLogger)
 
+app.use('/health', (req, res) => {
+  res.send('OK')
+})
+
 app.use('/api/users', userRouter)
 
 app.use('/api/login', loginRouter)

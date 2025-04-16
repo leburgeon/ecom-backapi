@@ -130,6 +130,4 @@ out
 .yarn/install-state.gz
 .pnp.*
 
-build/*
-
-/build
+server/build

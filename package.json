@@ -2,11 +2,11 @@
   "name": "ecom-backapi",
   "version": "1.0.0",
   "description": "An implementation of the backend api of an e-commerce application, using node.js, express and mongoose.",
-  "main": "build/index.js",
+  "main": "server/build/index.js",
   "scripts": {
     "tsc": "tsc",
-    "start": "node build/index.js",
-    "dev": "ts-node-dev src/index.ts",
+    "start": "node server/build/index.js",
+    "dev": "ts-node-dev server/index.ts",
     "lint": "eslint",
     "build": "tsc"
   },

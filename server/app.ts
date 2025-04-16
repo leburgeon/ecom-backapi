@@ -19,7 +19,7 @@ app.use(express.urlencoded({extended: true}))
 
 app.use(requestLogger)
 
-app.use('/health', (req, res) => {
+app.use('/health', (_req, res) => {
   res.send('OK')
 })
 
@@ -34,7 +34,7 @@ app.use('/api/orders', orderRouter)
 app.use('/api/basket', basketRouter)
 
 app.use((_req, res) => {
-  res.status(400).json({error: 'Uknown endpoint'})
+  res.redirect('/')
 })
 
 app.use(errorHandler)

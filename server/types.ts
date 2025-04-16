@@ -60,6 +60,8 @@ export interface RequestWithSearchFilters<
   filters?: any
 }
 
+
+
 // Interface extending the express request, whos quiery attribute contains a page and a limit field
 export interface PageQueriesRequest extends Request {
   query: {

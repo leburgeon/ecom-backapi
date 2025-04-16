@@ -227,13 +227,14 @@ const validateBasketAndPopulate = async (basket: Basket): Promise<ValidatedAndPo
   const stockCheckResults = await Promise.allSettled(promiseArrayOfStockChecks)
 
   // Object for storing the ids of not found or out of stock products
-  const missingStock = {
-    notFound: new Array(),
-    outOfStock: new Array()
+  const baskResult: ValidatedAndPopulatedBasketResult = {
+    missingStock: {
+      notFound: [],
+      outOfStock: []
+    },
+    populatedItems: []
+      
   }
-
-  // Array for storing the populated and validated items
-  const populatedItems = new Array()
 
   // Itterates over the results, adding any ids to the correct arrays in the stock results
   stockCheckResults.forEach(result => {
@@ -241,17 +242,17 @@ const validateBasketAndPopulate = async (basket: Basket): Promise<ValidatedAndPo
       const error = result.reason
       if (error instanceof StockError){
         if (error.message === 'Out of stock'){
-          missingStock.outOfStock.push({id: error.id, quantity: error.quantity}) 
+          baskResult.missingStock.outOfStock.push({id: error.id, quantity: error.quantity}) 
         } else if (error.message === 'Product not found'){
-          missingStock.notFound.push(error.id)
+          baskResult.missingStock.notFound.push(error.id)
         }
       }
     } else {
-      populatedItems.push(result.value)
+      baskResult.populatedItems.push(result.value)
     }
   })
 
-  return {missingStock, populatedItems}
+  return baskResult
 }
 
 // Middlewear for validating the stock levels and product ids from a basket [{id, quantity}]

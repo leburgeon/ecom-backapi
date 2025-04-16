@@ -16,7 +16,7 @@ const startServer = async () => {
     if (error instanceof Error){
       errorMessage += error.message
     }
-    console.error(error)
+    console.error(errorMessage, error)
   }
 
   console.log('Starting jobs')
@@ -30,5 +30,5 @@ const startServer = async () => {
   })
 }
 
-startServer()
+startServer().then().catch()
 

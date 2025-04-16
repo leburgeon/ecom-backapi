@@ -16,7 +16,7 @@ const orderRouter = express.Router()
 // Route for validating a basket for checkout, and re-calculating the total price
 // Parses the basket to ensure each product exists and there are no duplicate items and then validates the stock
   // Validate stock middlewear returns the stock quantities that were invalid in error response
-orderRouter.post('/checkout', parseBasket, validateBasketStock, async(req: AuthenticatedRequest<unknown, unknown, PopulatedBasket>, res: Response, _next: NextFunction) => {
+orderRouter.post('/checkout', parseBasket, validateBasketStock, async (req: AuthenticatedRequest<unknown, unknown, PopulatedBasket>, res: Response, _next: NextFunction) => {
   // Gets the parsed and populated basket from the request body
   const populatedBasket: PopulatedBasket = req.body
 
@@ -174,7 +174,7 @@ orderRouter.post('/capture/:orderID', authenticateUser, async (req: Authenticate
     // Will move this job to a task queue later!
     const userId = (req.user as { _id: mongoose.Types.ObjectId })._id
     try {
-      creatSessionAndHandleStockCleanup(userId, tempOrder)
+      await creatSessionAndHandleStockCleanup(userId, tempOrder)
     } catch (error){
       console.error(' Error cleaning up basket and stock reservations ', error)
     }

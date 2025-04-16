@@ -38,7 +38,7 @@ export const processBasket = async (basket: {id: string, quantity: number}[]): P
 
   // For storing array of items in the basket that are in the created order alongside a processed total
   const processedBasket: ProcessedBasket = {
-    items: new Array(),
+    items: [],
     totalCost: 0
   }
 
@@ -148,7 +148,7 @@ export const validatePurchaseUnitsAgainstTempOrder = (purchaseUnit: PurchaseUnit
     })
   })
 
-  for (let item of tempOrder.items){
+  for (const item of tempOrder.items){
     const ofPurchaseUnit = purchaseUnitItemsMap.get(item.product.toString())
     if (! ofPurchaseUnit){
       throw new Error('Could not find a matching id for one of the items in temporder, arrays did not match')

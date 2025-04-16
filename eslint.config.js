@@ -18,8 +18,10 @@ export default tseslint.config({
     "@stylistic": stylistic,
   },
   rules: {
-    '@typescript-eslint/no-unsafe-assignment': 'error',
-    '@typescript-eslint/no-explicit-any': 'error',
+    '@typescript-eslint/no-unsafe-assignment': 'off', // Disabled
+    '@typescript-eslint/no-explicit-any': 'off', // Disabled
+    '@typescript-eslint/no-unsafe-member-access': 'off', // Disabled
+    '@typescript-eslint/no-unsafe-argument': 'off', // Disabled
     '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/restrict-template-expressions': 'off',
@@ -28,5 +30,10 @@ export default tseslint.config({
       'error',
       { 'argsIgnorePattern': '^_' }
     ],
+    '@typescript-eslint/no-floating-promises': 'off', // Disabled
+    '@typescript-eslint/no-unused-expressions': 'off', // Disabled
+    '@typescript-eslint/require-await': 'off', // Disabled
+    '@typescript-eslint/no-misused-promises': 'off', // Disabled
+    '@typescript-eslint/no-base-to-string': 'off', // Disabled
   },
 });

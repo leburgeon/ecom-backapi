@@ -1,0 +1,57 @@
+name: Deployment Pipeline
+
+on:
+  push: 
+    branches:
+      - main
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize]
+
+
+jobs:
+  deployment-pipeline:
+    runs-on: ubuntu-latest
+    concurrency: deploy-group
+    steps:
+      - uses: actions/checkout@v4 # Checks repo out to the machine
+      - uses: actions/setup-node@v4 # Sets up the node environment 
+        with:
+          node-verison: '20'
+      - run: npm install # Installs the dependencies for the project
+      - name: Check Style
+        run: npm run eslint
+      - run: npm run build # Builds the app incl typescript etc
+      - if: ${{success() && github.event_name == 'push'}}
+        uses: superfly/flyctl-actions/setup-flyctl@master
+      - if: ${{success() && github.event_name == 'push'}}
+        run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  tag-release-and-notify:
+    needs: [deployment-pipeline]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps: 
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: '0'
+      - name: Bump Version And Push Tag
+        id: version-bump
+        uses: anothrNick/github-tag-action@v1
+        env: 
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
+      - if: success()
+        name: Notify Discord Successful Deploy
+        uses: rjstone/discord-webhook-notify@v1
+        with:
+          severity: info
+          username: Github-Actions-Workflow-Bot
+          text: "New Version ${{steps.version-bump.outputs.new_tag}} deployed!"
+          details: "A new version of the app ${{github.repository}} has been deployed to ${{vars.DEPLOYMENT_URL}}"
+          webhookUrl: ${{secrets.DISCORD_WEBHOOK}}
+
+
+

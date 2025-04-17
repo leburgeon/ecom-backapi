@@ -18,7 +18,7 @@ export const sendConfirmationEmail = (orderNumber: string, name: string, email: 
   return transporter.sendMail({
     from: '"Order Confirmation" <test@ethereal.com>',
     to: email,
-    subject: 'Thank You!',
+    subject: 'Order Confirmed!',
     html: generateOrderConfirmationEmail(orderNumber, name)
   })
 }

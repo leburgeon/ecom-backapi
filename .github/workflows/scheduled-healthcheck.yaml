@@ -25,3 +25,11 @@ jobs:
           username: HealthCheckBot
           text: Health check failed for application ${{github.repository}}
           description: Tried to ping ${{env.DEPLOYMENT_URL}}/health three times before giving up. Here is a link to the repo ${{github.repositoryUrl}}.
+      - if: success()
+        name: notify passed health check
+        uses: rjstone/discord-webhook-notify@v1
+        with:
+          severity: info
+          username: HealthCheckBot
+          text: Health check passed for application ${{github.repository}}
+          description: Tried to ping ${{env.DEPLOYMENT_URL}}/health and got 200 OK. Here is a link to the repo ${{github.repositoryUrl}}.

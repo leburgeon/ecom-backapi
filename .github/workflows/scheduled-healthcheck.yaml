@@ -1,0 +1,27 @@
+name: Scheduled Health Check
+
+on:
+  schedule:
+    - cron: "25 8 * * *"
+  push: 
+    branches:
+      - main
+
+jobs:
+  Check-Deployment-Health:
+    runs-on: ubuntu-latest
+    steps:
+      - name: check the deployed health
+        uses: jtalk/url-health-check-action@v4
+        with:
+          url: ${{vars.DEPLOYMENT_URL}}/health
+          max-attempts: 3
+          retry-delay: 5s
+      - if: failure()
+        name: notify failed health check
+        uses: rjstone/discord-webhook-notify@v1
+        with:
+          severity: error
+          username: HealthCheckBot
+          text: Health check failed for application ${{github.repository}}
+          description: Tried to ping ${{env.DEPLOYMENT_URL}}/health three times before giving up. Here is a link to the repo ${{github.repositoryUrl}}.

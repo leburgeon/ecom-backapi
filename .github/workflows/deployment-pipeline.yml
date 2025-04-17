@@ -21,6 +21,12 @@ jobs:
       - run: npm install # Installs the dependencies for the project
       - name: Check Style
         run: npm run lint
+      - if: failure()
+        uses: rjstone/discord-webhook-notify@v1
+        with: 
+          severity: error
+          text: Style check failed for latest commit
+          webhookUrl: ${{secrets.DISCORD_WEBHOOK}}
       - run: npm run build:full # Builds the app incl typescript etc
       - if: ${{success() && github.event_name == 'push'}}
         uses: superfly/flyctl-actions/setup-flyctl@master # deploys only if its a push or merge event and the build succeeds

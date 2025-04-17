@@ -77,7 +77,7 @@ const Basket = () => {
 
   return (
     <Paper elevation={3} sx={{ p: 4, maxWidth: 800, margin: '20px auto' }}>
-      <Typography variant="h4" gutterBottom align="center">Your Basket</Typography>
+      <Typography variant="h4" gutterBottom align="center">Your Beutiful Basket</Typography>
       {basketItems.length === 0 ? (
         <Typography variant="body1" align="center">No items in basket</Typography>
       ) : (

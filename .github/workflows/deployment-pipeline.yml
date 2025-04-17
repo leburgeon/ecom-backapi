@@ -23,14 +23,14 @@ jobs:
         run: npm run lint
       - run: npm run build:full # Builds the app incl typescript etc
       - if: ${{success() && github.event_name == 'push'}}
-        uses: superfly/flyctl-actions/setup-flyctl@master
+        uses: superfly/flyctl-actions/setup-flyctl@master # deploys only if its a push or merge event and the build succeeds
       - if: ${{success() && github.event_name == 'push'}}
-        run: flyctl deploy --remote-only
+        run: flyctl deploy --remote-only # deploys only if its a push or merge event and the build succeeds
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
   tag-release-and-notify:
-    needs: [deployment-pipeline] # Will wait for deployment-pipeline to finish and be successful
+    needs: [deployment-pipeline] # Will wait for deployment-pipeline to finish AND be successful
     runs-on: ubuntu-latest
     permissions:
       contents: write

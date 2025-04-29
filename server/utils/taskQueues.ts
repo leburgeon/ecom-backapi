@@ -4,7 +4,7 @@ import config from "./config"
 import { sendConfirmationEmail } from "./emailController"
 
 // Creates a new redis connection for bullmq to connect to
-const connection = new Redis(config.UPSTASH_ENDPOINT, { maxRetriesPerRequest: null })
+const connection = new Redis(config.UPSTASH_ENDPOINT)
 
 // Creates a new queue for email tasks
 const emailQueue = new Queue('Email', {connection})
